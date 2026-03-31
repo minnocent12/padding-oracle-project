@@ -67,7 +67,6 @@ padding_oracle_project/
 │   └── templates/
 │       └── dashboard.html           # 5-tab analytics dashboard
 │
-├── generate_presentation.py         # Generates 14-slide PowerPoint presentation
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -80,8 +79,8 @@ padding_oracle_project/
 ### 1. Clone or create the project folder
 
 ```bash
-git clone <repo-url> padding_oracle_project
-cd padding_oracle_project
+git clone https://github.com/minnocent12/padding-oracle-project.git
+cd padding-oracle-project
 ```
 
 ### 2. Create and activate a virtual environment
