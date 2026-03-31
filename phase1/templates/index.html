@@ -1,0 +1,556 @@
+<!-- phase1/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Vulnerable CBC Server — Phase 1</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:monospace;background:#0d1117;color:#c9d1d9;padding:1.5rem;font-size:.9rem}
+    h1{color:#f85149;font-size:1.25rem;margin-bottom:.2rem}
+    h2{color:#58a6ff;font-size:.95rem;margin:1.2rem 0 .5rem;font-weight:bold}
+    h3{color:#e3b341;font-size:.85rem;margin:.9rem 0 .35rem}
+
+    .warning{background:#3d1a1a;border:1px solid #f85149;padding:.6rem 1rem;
+             border-radius:6px;margin-bottom:1.2rem;font-size:.82rem;color:#ffa198}
+    .good   {background:#122d22;border:1px solid #3fb950;padding:.6rem 1rem;
+             border-radius:6px;font-size:.82rem;color:#7ee787}
+    .bad    {background:#3d1a1a;border:1px solid #f85149;padding:.6rem 1rem;
+             border-radius:6px;font-size:.82rem;color:#ffa198}
+    .info   {background:#111d2e;border:1px solid #58a6ff;padding:.55rem .9rem;
+             border-radius:6px;font-size:.8rem;color:#79c0ff;margin-bottom:.6rem}
+
+    label{font-size:.78rem;color:#8b949e;display:block;margin-bottom:.25rem}
+    input{width:100%;padding:.42rem .6rem;border-radius:5px;border:1px solid #30363d;
+          background:#161b22;color:#c9d1d9;font-family:monospace;font-size:.85rem;
+          margin-bottom:.6rem}
+    button{background:#238636;color:#fff;border:none;padding:.42rem 1rem;
+           border-radius:5px;cursor:pointer;font-family:monospace;font-size:.82rem;
+           margin-right:.4rem;font-weight:bold}
+    button:hover{background:#2ea043}
+    button.red{background:#b91c1c} button.red:hover{background:#dc2626}
+    button.blue{background:#1d4ed8} button.blue:hover{background:#2563eb}
+
+    .panel{background:#161b22;border:1px solid #21262d;border-radius:8px;
+           padding:1rem;margin-bottom:1rem}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+    @media(max-width:800px){.grid2{grid-template-columns:1fr}}
+
+    /* Byte grid */
+    .byte-grid{display:flex;flex-wrap:wrap;gap:3px;margin:.4rem 0}
+    .byte-cell{display:inline-flex;flex-direction:column;align-items:center;
+               width:36px;border-radius:4px;padding:3px 1px;font-size:.68rem;
+               border:1px solid #21262d;transition:all .2s}
+    .byte-cell .hex{font-weight:bold;font-size:.72rem}
+    .byte-cell .asc{color:#8b949e;font-size:.62rem}
+    .byte-cell.plain  {background:#1a2a1a;border-color:#3fb950;color:#3fb950}
+    .byte-cell.pad    {background:#2d2a10;border-color:#e3b341;color:#e3b341}
+    .byte-cell.cipher {background:#111d2e;border-color:#58a6ff;color:#58a6ff}
+    .byte-cell.xor    {background:#1e1a2e;border-color:#a78bfa;color:#a78bfa}
+    .byte-cell.iv     {background:#1e2a2e;border-color:#22d3ee;color:#22d3ee}
+    .byte-cell.raw    {background:#1e1e1e;border-color:#6b7280;color:#a1a1aa}
+    .byte-cell.bad-pad{background:#3d1a1a;border-color:#f85149;color:#f85149}
+    .byte-cell.key    {background:#161b22;border-color:#30363d;color:#6b7280}
+
+    /* XOR animation arrow */
+    .xor-row{display:flex;align-items:center;gap:6px;margin:.3rem 0;flex-wrap:wrap}
+    .xor-op{color:#a78bfa;font-weight:bold;font-size:1rem;flex-shrink:0}
+    .eq-op {color:#3fb950;font-weight:bold;font-size:1rem;flex-shrink:0}
+
+    /* Block header */
+    .block-header{display:flex;align-items:center;gap:.6rem;
+                  margin:.6rem 0 .3rem;flex-wrap:wrap}
+    .block-badge{background:#21262d;border:1px solid #30363d;border-radius:4px;
+                 padding:.15rem .5rem;font-size:.75rem;color:#8b949e}
+    .step-arrow{color:#e3b341;font-size:1.1rem;margin:.4rem 0;text-align:center}
+
+    /* Oracle signal */
+    .oracle-box{border-radius:8px;padding:.8rem 1rem;margin-top:.8rem;
+                font-size:.85rem;font-weight:bold;text-align:center;
+                letter-spacing:.03em}
+    .oracle-200{background:#122d22;border:2px solid #3fb950;color:#3fb950}
+    .oracle-403{background:#3d1a1a;border:2px solid #f85149;color:#f85149}
+
+    /* Padding table */
+    .pad-table{width:100%;border-collapse:collapse;font-size:.78rem;margin:.4rem 0}
+    .pad-table th{background:#21262d;color:#8b949e;padding:.3rem .5rem;
+                  text-align:left;border:1px solid #30363d}
+    .pad-table td{padding:.28rem .5rem;border:1px solid #21262d;color:#c9d1d9}
+    .pad-table tr:nth-child(even) td{background:#0d1117}
+    .pad-table .valid{color:#3fb950;font-weight:bold}
+    .pad-table .invalid{color:#f85149;font-weight:bold}
+
+    /* Tabs */
+    .tabs{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
+    .tab{padding:.35rem .85rem;border-radius:5px;cursor:pointer;font-size:.82rem;
+         border:1px solid #30363d;background:#161b22;color:#8b949e;font-family:monospace}
+    .tab.active{background:#58a6ff;color:#000;border-color:#58a6ff;font-weight:bold}
+
+    .legend{display:flex;gap:.8rem;flex-wrap:wrap;font-size:.75rem;margin:.5rem 0}
+    .legend-item{display:flex;align-items:center;gap:.3rem}
+    .legend-dot{width:10px;height:10px;border-radius:2px}
+
+    .step-label{color:#e3b341;font-size:.78rem;font-weight:bold;
+                margin:.5rem 0 .2rem;display:flex;align-items:center;gap:.4rem}
+    .step-num{background:#e3b341;color:#000;border-radius:50%;width:18px;height:18px;
+              display:inline-flex;align-items:center;justify-content:center;
+              font-size:.7rem;font-weight:bold;flex-shrink:0}
+
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid #30363d;
+             border-top-color:#58a6ff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .hidden{display:none}
+    pre{font-size:.75rem;color:#8b949e;white-space:pre-wrap;word-break:break-all}
+    .mono{font-family:monospace;font-size:.8rem}
+    .dim{color:#8b949e}
+    .green{color:#3fb950} .red{color:#f85149}
+    .blue{color:#58a6ff}  .yellow{color:#e3b341}
+    .purple{color:#a78bfa}.cyan{color:#22d3ee}
+  </style>
+</head>
+<body>
+
+<h1>⚠ Vulnerable AES-CBC Server</h1>
+<p class="dim" style="margin-bottom:.8rem">Phase 1 — Live Internals Visualization</p>
+
+<div class="warning">
+  This server <strong>intentionally leaks padding errors</strong> via distinct HTTP responses.
+  <strong>HTTP 200</strong> = valid padding &nbsp;|&nbsp; <strong>HTTP 403</strong> = invalid padding.
+  Every internal step of encryption and decryption is shown live below.
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('enc')">🔒 Encryption</div>
+  <div class="tab" onclick="switchTab('dec')">🔓 Decryption + Oracle</div>
+  <div class="tab" onclick="switchTab('learn')">📖 How It Works</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TAB 1 — ENCRYPTION
+════════════════════════════════════════════════════════ -->
+<div id="tab-enc">
+  <div class="grid2">
+    <div class="panel">
+      <h2>Input</h2>
+      <label>Plaintext message</label>
+      <input id="pt" type="text" value="Hello, CBC!" placeholder="Type your message"/>
+      <button onclick="doEncryptDebug()">🔒 Encrypt &amp; Visualize</button>
+      <div id="enc-spinner" class="hidden" style="margin-top:.5rem">
+        <span class="spinner"></span> <span class="dim">Encrypting...</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Legend</h2>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>Plaintext</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e3b341"></div>Padding</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22d3ee"></div>IV / Prev CT</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>XOR result</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div>Ciphertext</div>
+      </div>
+      <div id="enc-summary" class="hidden">
+        <table class="pad-table" style="margin-top:.5rem">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tbody id="enc-summary-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div id="enc-steps"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     TAB 2 — DECRYPTION + ORACLE
+════════════════════════════════════════════════════════ -->
+<div id="tab-dec" class="hidden">
+  <div class="grid2">
+    <div class="panel">
+      <h2>Input</h2>
+      <label>IV (hex) — auto-filled after encryption</label>
+      <input id="iv-in" placeholder="Paste IV hex"/>
+      <label>Ciphertext (hex)</label>
+      <input id="ct-in" placeholder="Paste ciphertext hex"/>
+      <button onclick="doDecryptDebug()">🔓 Decrypt &amp; Visualize</button>
+      <button class="red" onclick="corruptAndDecrypt()" style="margin-top:.4rem">
+        ☠ Corrupt + Decrypt
+      </button>
+      <div id="dec-spinner" class="hidden" style="margin-top:.5rem">
+        <span class="spinner"></span> <span class="dim">Decrypting...</span>
+      </div>
+      <div class="info" style="margin-top:.8rem">
+        <strong>Corrupt</strong> flips the last byte of the ciphertext, producing invalid
+        padding — triggering the oracle's HTTP 403 response.
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Oracle Signal</h2>
+      <div id="oracle-box" style="color:#8b949e;font-size:.85rem">
+        Run a decryption to see the oracle response here.
+      </div>
+      <div id="padding-analysis" class="hidden" style="margin-top:.8rem">
+        <h3>Padding Validation Details</h3>
+        <table class="pad-table"><tbody id="pad-detail-body"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div id="dec-steps"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     TAB 3 — LEARN
+════════════════════════════════════════════════════════ -->
+<div id="tab-learn" class="hidden">
+  <div class="panel">
+    <h2>AES-CBC Encryption — Step by Step</h2>
+    <div class="info">CBC = Cipher Block Chaining. Each block is chained to the previous one.</div>
+    <div class="step-label"><span class="step-num">1</span> Split plaintext into 16-byte blocks</div>
+    <pre>  "Hello, CBC World!!" → Block 0: "Hello, CBC World" | Block 1: "!!" + padding</pre>
+    <div class="step-label"><span class="step-num">2</span> Apply PKCS#7 padding to the last block</div>
+    <pre>  If message = 11 bytes → add 5 bytes of value 0x05
+  "Hello CBC" (9B) → "Hello CBC" + 07 07 07 07 07 07 07</pre>
+    <div class="step-label"><span class="step-num">3</span> For each block: XOR with IV (first) or previous ciphertext block</div>
+    <pre>  XOR_input = PlaintextBlock ⊕ IV_or_PrevCiphertextBlock</pre>
+    <div class="step-label"><span class="step-num">4</span> AES-encrypt the XOR result to get the ciphertext block</div>
+    <pre>  CiphertextBlock = AES_Encrypt(key, XOR_input)</pre>
+    <div class="step-label"><span class="step-num">5</span> That ciphertext block becomes "prev" for the next block</div>
+  </div>
+  <div class="panel">
+    <h2>AES-CBC Decryption — Step by Step</h2>
+    <div class="step-label"><span class="step-num">1</span> AES-decrypt each ciphertext block (raw output = intermediate)</div>
+    <pre>  AES_Raw = AES_Decrypt(key, CiphertextBlock)</pre>
+    <div class="step-label"><span class="step-num">2</span> XOR with IV (first block) or previous ciphertext block</div>
+    <pre>  PlaintextBlock = AES_Raw ⊕ IV_or_PrevCiphertextBlock</pre>
+    <div class="step-label"><span class="step-num">3</span> On the last block: validate PKCS#7 padding</div>
+    <pre>  Read last byte N. Check that the last N bytes all equal N.
+  Valid:   ... 03 03 03  → strip 3 bytes → OK
+  Invalid: ... 03 02 01  → PADDING ERROR → HTTP 403</pre>
+    <div class="step-label"><span class="step-num">4</span> The distinct HTTP response IS the oracle signal</div>
+    <div class="bad" style="margin-top:.5rem">
+      HTTP 200 = padding valid &nbsp;&nbsp; HTTP 403 = padding invalid<br/>
+      <strong>This single distinction allows full plaintext recovery without the key.</strong>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>PKCS#7 Padding Reference</h2>
+    <table class="pad-table">
+      <tr><th>Plaintext length (mod 16)</th><th>Bytes added</th><th>Values</th></tr>
+      <tr><td>15 bytes</td><td>1</td><td class="yellow">01</td></tr>
+      <tr><td>14 bytes</td><td>2</td><td class="yellow">02 02</td></tr>
+      <tr><td>13 bytes</td><td>3</td><td class="yellow">03 03 03</td></tr>
+      <tr><td>8 bytes</td><td>8</td><td class="yellow">08 08 08 08 08 08 08 08</td></tr>
+      <tr><td>0 bytes (exact fit)</td><td>16</td><td class="yellow">10 ×16 (full extra block)</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(name) {
+  ["enc","dec","learn"].forEach(t => {
+    document.getElementById("tab-"+t).classList.toggle("hidden", t!==name);
+    document.querySelectorAll(".tab").forEach((el,i) => {
+      el.classList.toggle("active", ["enc","dec","learn"][i]===name);
+    });
+  });
+}
+
+// ── Byte cell builder ──────────────────────────────────────────
+function byteCell(hex, ascii, cls, title="") {
+  return `<div class="byte-cell ${cls}" title="${title}">
+    <span class="hex">${hex}</span>
+    <span class="asc">${ascii}</span>
+  </div>`;
+}
+
+function byteGrid(hexList, asciiList, classes, title="") {
+  const cells = hexList.map((h,i) =>
+    byteCell(h, asciiList ? asciiList[i] : "", classes[i] || classes, title)
+  ).join("");
+  return `<div class="byte-grid">${cells}</div>`;
+}
+
+// ── XOR row ────────────────────────────────────────────────────
+function xorRow(aHex, aCls, bHex, bCls, resHex, resCls, aLabel, bLabel, resLabel) {
+  const a   = byteGrid(aHex,   null, aCls);
+  const b   = byteGrid(bHex,   null, bCls);
+  const res = byteGrid(resHex, null, resCls);
+  return `
+    <div class="step-label" style="margin-top:.6rem">
+      <span style="color:#a78bfa">⊕</span> XOR Operation
+    </div>
+    <div class="xor-row">
+      <div>
+        <div class="dim" style="font-size:.72rem;margin-bottom:2px">${aLabel}</div>${a}
+      </div>
+      <div class="xor-op">⊕</div>
+      <div>
+        <div class="dim" style="font-size:.72rem;margin-bottom:2px">${bLabel}</div>${b}
+      </div>
+      <div class="eq-op">=</div>
+      <div>
+        <div class="dim" style="font-size:.72rem;margin-bottom:2px">${resLabel}</div>${res}
+      </div>
+    </div>`;
+}
+
+// ── Encrypt debug ──────────────────────────────────────────────
+async function doEncryptDebug() {
+  const pt = document.getElementById("pt").value.trim();
+  if(!pt) return;
+  show("enc-spinner"); hide("enc-summary");
+  document.getElementById("enc-steps").innerHTML = "";
+
+  const resp = await fetch("/encrypt-debug", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({plaintext: pt})
+  });
+  const d = await resp.json();
+  hide("enc-spinner");
+
+  // Summary table
+  const sb = document.getElementById("enc-summary-body");
+  sb.innerHTML = `
+    <tr><td>Plaintext</td><td class="green">"${d.original_plaintext}"</td></tr>
+    <tr><td>Length</td><td>${d.plaintext_length} bytes</td></tr>
+    <tr><td>Pad length added</td><td class="yellow">${d.pad_length} byte(s) of value 0x${d.pad_length.toString(16).padStart(2,"0")}</td></tr>
+    <tr><td>Padded length</td><td>${d.padded_length} bytes (${d.num_blocks} block${d.num_blocks>1?"s":""})</td></tr>
+    <tr><td>IV</td><td class="cyan">${d.iv_hex}</td></tr>
+    <tr><td>Ciphertext</td><td class="blue">${d.ciphertext}</td></tr>`;
+  show("enc-summary");
+
+  // Auto-fill decrypt tab
+  document.getElementById("iv-in").value  = d.iv_hex;
+  document.getElementById("ct-in").value  = d.ciphertext;
+
+  // Build step-by-step blocks
+  let html = `
+    <div class="panel">
+      <h2>Step 1 — PKCS#7 Padding</h2>
+      <div class="step-label"><span class="step-num">▸</span>
+        Original plaintext bytes (${d.plaintext_length}B):
+      </div>
+      ${byteGrid(d.plaintext_bytes, d.plaintext_bytes.map(h=>ascii(h)), "plain")}
+      <div class="step-label" style="margin-top:.6rem">
+        <span class="step-num">▸</span>
+        After padding (${d.padded_length}B) — <span class="yellow">yellow = padding bytes</span>:
+      </div>
+      ${buildPaddedGrid(d)}
+    </div>
+
+    <div class="panel">
+      <h2>Step 2 — IV (Initialization Vector)</h2>
+      <div class="info">
+        A fresh random 16-byte value generated for every encryption.
+        Used as the "previous block" for Block 0. Never reuse the same IV with the same key.
+      </div>
+      ${byteGrid(d.iv, d.iv.map(h=>ascii(h)), "iv")}
+    </div>`;
+
+  d.blocks.forEach((blk, bi) => {
+    const prevLabel = bi === 0 ? "IV" : `CT Block ${bi-1}`;
+    html += `
+    <div class="panel">
+      <h2>Step 3 — Block ${bi} Encryption</h2>
+      <div class="block-badge">Block ${bi} of ${d.num_blocks}</div>
+
+      <div class="step-label" style="margin-top:.7rem">
+        <span class="step-num">1</span> Plaintext block:
+      </div>
+      ${byteGrid(blk.plaintext_block, blk.plaintext_ascii, blk.plaintext_block.map((_,i)=>blk.is_padding[i]?"pad":"plain"))}
+
+      ${xorRow(
+        blk.plaintext_block, blk.plaintext_block.map((_,i)=>blk.is_padding[i]?"pad":"plain"),
+        blk.prev_block,      Array(16).fill("iv"),
+        blk.xor_result,      Array(16).fill("xor"),
+        `Plaintext Block ${bi}`, prevLabel, "XOR Result"
+      )}
+
+      <div class="step-label" style="margin-top:.7rem">
+        <span class="step-num">3</span> AES_Encrypt(key, XOR result) → Ciphertext block ${bi}:
+      </div>
+      <div class="info" style="font-size:.75rem">
+        AES performs 10 rounds of substitution, permutation, and mixing.
+        The key is hidden — only the output is shown.
+      </div>
+      ${byteGrid(blk.ct_block, blk.ct_block.map(h=>ascii(h)), "cipher")}
+    </div>`;
+  });
+
+  html += `
+    <div class="panel">
+      <h2>Final Output</h2>
+      <div class="step-label"><span class="step-num">▸</span> IV (send alongside ciphertext):</div>
+      ${byteGrid(d.iv, d.iv.map(h=>ascii(h)), "iv")}
+      <div class="step-label" style="margin-top:.6rem"><span class="step-num">▸</span> Full ciphertext:</div>
+      <div class="byte-grid">${d.blocks.map(b=>b.ct_block.map(h=>`<div class="byte-cell cipher"><span class="hex">${h}</span></div>`).join("")).join("")}</div>
+      <div class="good" style="margin-top:.8rem">
+        ✔ Encryption complete. The secret key was never exposed.
+        Switch to the Decryption tab to see the oracle in action.
+      </div>
+    </div>`;
+
+  document.getElementById("enc-steps").innerHTML = html;
+}
+
+// ── Decrypt debug ──────────────────────────────────────────────
+async function doDecryptDebug(corrupted=false) {
+  let ivHex = document.getElementById("iv-in").value.trim();
+  let ctHex = document.getElementById("ct-in").value.trim();
+  if(!ivHex || !ctHex) return alert("Paste IV and ciphertext first.");
+
+  if(corrupted) {
+    const bytes = ctHex.match(/.{2}/g);
+    bytes[bytes.length-1] = ((parseInt(bytes[bytes.length-1],16)^0xFF)
+                              .toString(16).padStart(2,"0"));
+    ctHex = bytes.join("");
+    document.getElementById("ct-in").value = ctHex;
+  }
+
+  show("dec-spinner"); hide("padding-analysis");
+  document.getElementById("dec-steps").innerHTML = "";
+  document.getElementById("oracle-box").innerHTML =
+    '<span class="spinner"></span> Querying oracle...';
+
+  const resp = await fetch("/decrypt-debug", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({iv: ivHex, ciphertext: ctHex})
+  });
+  const d = await resp.json();
+  hide("dec-spinner");
+
+  // Oracle box
+  const oBox = document.getElementById("oracle-box");
+  if(d.oracle_code===200) {
+    oBox.innerHTML = `
+      <div class="oracle-box oracle-200">
+        ✔ HTTP 200 — VALID padding<br/>
+        <span style="font-size:.78rem;font-weight:normal">
+          Plaintext: "${d.recovered_plaintext}"
+        </span>
+      </div>`;
+  } else {
+    oBox.innerHTML = `
+      <div class="oracle-box oracle-403">
+        ✘ HTTP 403 — INVALID padding ← ORACLE SIGNAL<br/>
+        <span style="font-size:.78rem;font-weight:normal">
+          An attacker reads this response to determine byte values.
+        </span>
+      </div>`;
+  }
+
+  // Padding details
+  const pb = document.getElementById("pad-detail-body");
+  const lastBytes = d.last_block_bytes;
+  const padVal    = d.pad_val;
+  pb.innerHTML = `
+    <tr><td>Last byte value</td>
+        <td class="${d.pad_valid?"valid":"invalid"}">
+          0x${padVal.toString(16).padStart(2,"0")} (${padVal})
+        </td></tr>
+    <tr><td>Expected padding</td>
+        <td class="yellow">Last ${padVal} byte(s) must all equal 0x${padVal.toString(16).padStart(2,"0")}</td></tr>
+    <tr><td>Actual last ${Math.min(padVal,16)} bytes</td>
+        <td class="mono">${lastBytes.slice(-Math.min(padVal,16)).map(b=>`<span class="${b===padVal?"valid":"invalid"}">${b.toString(16).padStart(2,"0")}</span>`).join(" ")}</td></tr>
+    <tr><td>Padding valid?</td>
+        <td class="${d.pad_valid?"valid":"invalid"} " style="font-size:.9rem">
+          ${d.pad_valid ? "✔ YES → HTTP 200" : "✘ NO → HTTP 403 (oracle leak)"}
+        </td></tr>`;
+  show("padding-analysis");
+
+  // Step-by-step blocks
+  let html = `
+    <div class="panel">
+      <h2>Step 1 — Inputs</h2>
+      <div class="step-label"><span class="step-num">▸</span> IV:</div>
+      ${byteGrid(d.iv, d.iv.map(h=>ascii(h)), "iv")}
+    </div>`;
+
+  d.blocks.forEach((blk, bi) => {
+    const prevLabel = bi===0 ? "IV" : `CT Block ${bi-1}`;
+    html += `
+    <div class="panel">
+      <h2>Step 2 — Block ${bi} Decryption</h2>
+      <div class="block-badge">Block ${bi} of ${d.num_blocks}</div>
+
+      <div class="step-label" style="margin-top:.7rem">
+        <span class="step-num">1</span> Ciphertext block ${bi}:
+      </div>
+      ${byteGrid(blk.ct_block, blk.ct_block.map(h=>ascii(h)), "cipher")}
+
+      <div class="step-label" style="margin-top:.6rem">
+        <span class="step-num">2</span> AES_Decrypt(key, CT block ${bi}) → raw intermediate:
+      </div>
+      <div class="info" style="font-size:.75rem">
+        This intermediate value is what the attacker tries to discover.
+        It equals AES_Dec(CT) — XOR with IV/prev gives the plaintext.
+      </div>
+      ${byteGrid(blk.aes_raw_output, blk.aes_raw_output.map(h=>ascii(h)), "raw")}
+
+      ${xorRow(
+        blk.aes_raw_output, Array(16).fill("raw"),
+        blk.prev_block,     Array(16).fill("iv"),
+        blk.pt_block,       bi===d.num_blocks-1
+          ? blk.pt_block.map((_,i)=>d.padding_map[i]?(d.pad_valid?"pad":"bad-pad"):"plain")
+          : Array(16).fill("plain"),
+        `AES Raw Output (Block ${bi})`, prevLabel,
+        `Plaintext Block ${bi}`
+      )}
+
+      ${bi===d.num_blocks-1 ? buildPaddingStep(d, blk) : ""}
+    </div>`;
+  });
+
+  document.getElementById("dec-steps").innerHTML = html;
+}
+
+function buildPaddingStep(d, blk) {
+  const padVal = d.pad_val;
+  const valid  = d.pad_valid;
+  return `
+    <div class="step-label" style="margin-top:.8rem">
+      <span class="step-num">3</span> PKCS#7 Padding Validation (last block):
+    </div>
+    <div class="${valid?"good":"bad"}" style="margin-top:.3rem">
+      Last byte = 0x${padVal.toString(16).padStart(2,"0")} (${padVal})
+      → check last ${padVal} byte(s) all equal ${padVal}<br/>
+      ${valid
+        ? `✔ Valid — strip ${padVal} byte(s) → plaintext recovered`
+        : `✘ Invalid — padding bytes inconsistent → HTTP 403 oracle signal`}
+    </div>
+    <div class="oracle-box ${valid?"oracle-200":"oracle-403"}" style="margin-top:.6rem">
+      ${d.oracle_signal}
+    </div>`;
+}
+
+function buildPaddedGrid(d) {
+  const ptLen  = d.plaintext_length;
+  const cells  = d.padded_bytes.map((h,i) => {
+    const isPad = i >= ptLen;
+    const cls   = isPad ? "pad" : "plain";
+    const asc   = ascii(h);
+    const title = isPad ? `Padding byte (0x${h})` : `Plaintext byte`;
+    return `<div class="byte-cell ${cls}" title="${title}">
+      <span class="hex">${h}</span>
+      <span class="asc">${isPad?"P":asc}</span>
+    </div>`;
+  }).join("");
+  return `<div class="byte-grid">${cells}</div>`;
+}
+
+async function corruptAndDecrypt() {
+  await doDecryptDebug(true);
+}
+
+// ── Helpers ────────────────────────────────────────────────────
+function ascii(hex) {
+  const c = parseInt(hex,16);
+  return (c>=32&&c<127) ? String.fromCharCode(c) : ".";
+}
+function show(id){ document.getElementById(id).classList.remove("hidden") }
+function hide(id){ document.getElementById(id).classList.add("hidden") }
+</script>
+</body>
+</html>

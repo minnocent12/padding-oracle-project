@@ -1,0 +1,123 @@
+<!-- TAB 1 — ENCRYPTION
+     JS lives in static/js/tab_encrypt.js -->
+
+<div class="safe-banner">
+  🔒 AES-256-GCM encryption — every message gets a fresh random nonce and a 128-bit auth tag.
+</div>
+
+<!-- Input -->
+<div class="panel">
+  <h2>✏️ Enter Your Message</h2>
+  <label class="field-label">Plaintext to encrypt:</label>
+  <input id="enc-pt" value="Hello from AES-GCM!" placeholder="Type any message..."/>
+  <button class="btn-green" id="btn-encrypt" onclick="runEncrypt()">🔒 Encrypt</button>
+  <button class="btn-blue"  onclick="resetEncrypt()">↺ Reset</button>
+</div>
+
+<!-- Live pipeline -->
+<div class="panel">
+  <h2>⚙️ Encryption Pipeline — Live Steps</h2>
+  <div class="info" style="margin-bottom:.8rem">
+    Each step lights up as it completes. Watch the message transform from plaintext to
+    authenticated ciphertext.
+  </div>
+
+  <div class="pipeline">
+
+    <!-- Step 1 -->
+    <div class="pipe-step" id="enc-s1">
+      <div class="pipe-header">
+        <span class="pipe-icon">📝</span>
+        <span class="pipe-title">Step 1 — Read Plaintext</span>
+        <span class="pipe-status ps-waiting" id="enc-s1-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        The original message in UTF-8 bytes.
+        <div class="pipe-value" id="enc-s1-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="pipe-step" id="enc-s2">
+      <div class="pipe-header">
+        <span class="pipe-icon">🎲</span>
+        <span class="pipe-title">Step 2 — Generate Random Nonce (96-bit)</span>
+        <span class="pipe-status ps-waiting" id="enc-s2-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        A cryptographically random 12-byte (96-bit) nonce is generated.
+        It is <strong>never reused</strong> — a fresh nonce for every single encryption.
+        <div class="pipe-value" id="enc-s2-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="pipe-step" id="enc-s3">
+      <div class="pipe-header">
+        <span class="pipe-icon">🔑</span>
+        <span class="pipe-title">Step 3 — AES-256 Encryption (CTR mode)</span>
+        <span class="pipe-status ps-waiting" id="enc-s3-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        AES encrypts the plaintext using the 256-bit secret key and the nonce
+        in <strong>Counter (CTR) mode</strong>. No padding is needed — CTR is a stream cipher.
+        <div class="pipe-value" id="enc-s3-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="pipe-step" id="enc-s4">
+      <div class="pipe-header">
+        <span class="pipe-icon">🔏</span>
+        <span class="pipe-title">Step 4 — Compute GHASH Authentication Tag (128-bit)</span>
+        <span class="pipe-status ps-waiting" id="enc-s4-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        The GHASH function computes a 128-bit authentication tag over the ciphertext
+        and the key. This tag is a <strong>cryptographic proof of integrity</strong> —
+        any modification to the ciphertext will produce a different tag.
+        <div class="pipe-value" id="enc-s4-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="pipe-step" id="enc-s5">
+      <div class="pipe-header">
+        <span class="pipe-icon">📦</span>
+        <span class="pipe-title">Step 5 — Final Output</span>
+        <span class="pipe-status ps-waiting" id="enc-s5-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        Three values are produced. All three are required for decryption.
+        <div class="pipe-value" id="enc-s5-val"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Result -->
+<div class="result-banner rb-success" id="enc-result"></div>
+
+<!-- Summary -->
+<div class="panel" id="enc-summary" style="display:none">
+  <h2>📋 Encryption Summary</h2>
+  <div class="grid3">
+    <div>
+      <div class="field-label">🟢 Nonce (96-bit — copy for decryption):</div>
+      <div class="val-box vb-green" id="sum-nonce">—</div>
+    </div>
+    <div>
+      <div class="field-label">🔵 Ciphertext:</div>
+      <div class="val-box vb-blue" id="sum-ct">—</div>
+    </div>
+    <div>
+      <div class="field-label">🟡 Auth Tag (128-bit):</div>
+      <div class="val-box vb-amber" id="sum-tag">—</div>
+    </div>
+  </div>
+  <div class="note-box" style="margin-top:.6rem">
+    💡 Switch to the <strong>🔓 Decryption</strong> tab — these values are auto-filled there.
+    Try decrypting normally, then tamper with any field to see the auth tag catch it.
+  </div>
+</div>

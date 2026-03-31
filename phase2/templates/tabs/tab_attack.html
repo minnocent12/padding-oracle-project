@@ -1,0 +1,146 @@
+<!-- TAB 1 — LIVE ATTACK
+     JS lives in static/js/tab_attack.js -->
+
+<div class="warning">
+  ⚠ This tool exploits the CBC server's padding oracle.
+  Every HTTP 200 / 403 response leaks information about the plaintext.
+  Watch each byte get recovered live — <strong>without ever knowing the AES key</strong>.
+</div>
+
+<!-- ── Step 1: Controls ───────────────────────────────────────── -->
+<div class="panel">
+  <h2>🎯 Step 1 — Choose Your Target</h2>
+  <div class="grid2">
+
+    <div>
+      <label class="field-label">Target plaintext — type anything, any length</label>
+      <input id="pt-input" value="AttackSuccess!!" placeholder="Enter any message to attack"/>
+      <div class="pt-hint">
+        Length: <span id="pt-len">16</span> chars →
+        <span id="pt-blocks">1</span> block(s) →
+        <span id="pt-bytes">16</span> bytes to recover
+      </div>
+      <div>
+        <button class="btn-green" id="btn-start" onclick="startAttack()">▶ Start Attack</button>
+        <button class="btn-red"   id="btn-stop"  onclick="stopAttack()" disabled>■ Stop</button>
+        <button class="btn-blue"  id="btn-reset" onclick="resetUI()">↺ Reset</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="stat-val green"  id="s-queries">0</span>
+          <span class="stat-lbl">Oracle Queries</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-val yellow" id="s-bytes">0/?</span>
+          <span class="stat-lbl">Bytes Recovered</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-val blue"   id="s-block">—</span>
+          <span class="stat-lbl">Current Block</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-val dim"    id="s-elapsed">0.0s</span>
+          <span class="stat-lbl">Elapsed</span>
+        </div>
+      </div>
+      <div class="prog-wrap"><div class="prog-bar" id="progress"></div></div>
+      <div style="font-size:.75rem;color:#8b949e;text-align:center" id="status-text">
+        Ready — enter a plaintext and press Start Attack
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Step 2: Intercepted Ciphertext ────────────────────────── -->
+<div class="panel" id="ct-panel" style="display:none">
+  <h2>🔑 Step 2 — Intercepted Ciphertext (Attacker's Starting Point)</h2>
+  <div class="info" style="margin-bottom:.8rem">
+    The server encrypted your plaintext. These two values are all the attacker has.
+    The <strong>secret AES key is never seen, never used</strong> in the recovery below.
+  </div>
+  <div class="grid2">
+    <div class="ct-panel-inner">
+      <div class="ct-label">🔵 IV (Initialization Vector) — attacker sees this:</div>
+      <div class="ct-value ct-iv-val" id="ct-iv">—</div>
+    </div>
+    <div class="ct-panel-inner">
+      <div class="ct-label">🔷 Ciphertext — attacker sees this:</div>
+      <div class="ct-value ct-hex-val" id="ct-hex">—</div>
+    </div>
+  </div>
+  <div class="note-box" style="margin-top:.5rem">
+    💡 Copy these values and try them in the <strong>🕵️ Attacker Tool</strong> tab to manually
+    send them to the server and see the oracle in action.
+  </div>
+</div>
+
+<!-- ── Step 3: Byte Recovery Grid ────────────────────────────── -->
+<div class="panel">
+  <h2>🔠 Step 3 — Byte Recovery Grid</h2>
+  <div class="info">
+    <span class="yellow">Yellow pulsing</span> = currently attacking ·
+    <span class="green">Green</span> = recovered ·
+    <span class="purple">Purple</span> = padding byte ·
+    Each block of 16 bytes shown separately
+  </div>
+  <div id="byte-grid-container">
+    <span class="dim" style="font-size:.8rem">Grid appears when attack starts...</span>
+  </div>
+  <div style="margin-top:.6rem;font-size:.85rem">
+    Recovered so far:
+    <span class="green" id="recovered-str"
+          style="font-size:1rem;font-weight:bold;letter-spacing:.08em;word-break:break-all">
+      —
+    </span>
+  </div>
+</div>
+
+<!-- ── Step 4: Live Detail Panels ────────────────────────────── -->
+<div class="grid3">
+
+  <div class="panel">
+    <h2>📡 Step 4a — Live Oracle Feed</h2>
+    <div class="info" style="font-size:.74rem">
+      Every row = one HTTP POST to <code>/decrypt</code>.
+      <span class="green">200</span> = valid padding ·
+      <span class="red">403</span> = invalid padding
+    </div>
+    <div class="feed" id="oracle-feed"></div>
+  </div>
+
+  <div class="panel">
+    <h2>🔢 Step 4b — XOR Math Live</h2>
+    <div class="info" style="font-size:.74rem">
+      Two XOR operations reveal each plaintext byte the moment it's found.
+    </div>
+    <div class="math-box" id="math-box">
+      <span class="dim">Waiting for first byte recovery...</span>
+    </div>
+    <h3 style="margin-top:.8rem">Current Target</h3>
+    <div id="byte-detail" style="font-size:.78rem;color:#8b949e">—</div>
+  </div>
+
+  <div class="panel">
+    <h2>📊 Step 4c — Queries per Byte</h2>
+    <div class="info" style="font-size:.74rem">
+      Builds live ·
+      <span class="green">≤100</span> ·
+      <span class="blue">101–200</span> ·
+      <span class="red">&gt;200</span>
+    </div>
+    <div class="chart" id="bar-chart"></div>
+    <div style="font-size:.75rem;color:#8b949e;margin-top:.3rem">
+      Avg: <span class="yellow" id="avg-q">—</span> &nbsp;
+      Max: <span class="red"    id="max-q">—</span> &nbsp;
+      Min: <span class="green"  id="min-q">—</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Step 5: Result Banner ──────────────────────────────────── -->
+<div class="result-banner" id="result-banner"></div>

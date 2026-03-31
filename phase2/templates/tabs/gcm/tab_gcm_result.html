@@ -1,0 +1,91 @@
+<!-- TAB — GCM RESULTS
+     Populated by tab_gcm_attack.js after probe completes. -->
+
+<div class="info" style="margin-bottom:1rem">
+  Run the oracle probe in the <strong>⚔ Oracle Probe</strong> tab first.
+  Full results and analysis will appear here automatically.
+</div>
+
+<div id="gcm-result-empty" style="text-align:center;padding:3rem;color:#8b949e">
+  No probe results yet — go to <strong>⚔ Oracle Probe</strong> and run the attack.
+</div>
+
+<div id="gcm-result-content" style="display:none">
+
+  <!-- Summary -->
+  <div class="panel">
+    <h2>📋 Probe Summary</h2>
+    <div class="grid3">
+      <div class="stat-card">
+        <span class="stat-val green"  id="res-total">—</span>
+        <span class="stat-lbl">Total Requests</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val"        id="res-unique">—</span>
+        <span class="stat-lbl">Unique Response Codes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val dim"    id="res-elapsed">—</span>
+        <span class="stat-lbl">Time Elapsed</span>
+      </div>
+    </div>
+    <div class="verdict" id="res-verdict" style="display:block;margin-top:.8rem"></div>
+  </div>
+
+  <!-- CBC vs GCM side-by-side -->
+  <div class="panel">
+    <h2>📊 CBC vs GCM — What the Attack Sees</h2>
+    <div class="two-col">
+      <div>
+        <h3 style="color:#f85149;margin-bottom:.5rem">⚔ Against AES-CBC (Phase 1)</h3>
+        <div class="step-card red">
+          <div class="step-body">
+            For each byte, the attacker sends up to 256 requests.<br/>
+            <strong>One of those returns HTTP 200</strong> — valid padding found.<br/>
+            That single 200 is enough to recover the byte via XOR.<br/><br/>
+            Result: <span class="red">~2048 requests → full plaintext exposed.</span>
+          </div>
+        </div>
+        <div class="ct-panel-inner" style="margin-top:.5rem">
+          <div class="ct-label">Oracle signal from CBC:</div>
+          <div class="val-box" style="background:#3d1a1a;border:1px solid #f85149;
+               color:#f85149;padding:.4rem .6rem;border-radius:4px;font-size:.8rem">
+            HTTP 200 on guess 0x__ → byte recovered ✔
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:#3fb950;margin-bottom:.5rem">🛡 Against AES-GCM (Phase 3)</h3>
+        <div class="step-card green">
+          <div class="step-body">
+            For each byte, the attacker sends 256 requests.<br/>
+            <strong>Every single one returns HTTP 403</strong> — auth tag mismatch.<br/>
+            There is no 200. There is no signal. There is nothing to learn.<br/><br/>
+            Result: <span class="green">256 × HTTP 403 → zero information leaked.</span>
+          </div>
+        </div>
+        <div class="ct-panel-inner" style="margin-top:.5rem">
+          <div class="ct-label">Oracle signal from GCM:</div>
+          <div class="val-box" style="background:#122d22;border:1px solid #3fb950;
+               color:#3fb950;padding:.4rem .6rem;border-radius:4px;font-size:.8rem"
+               id="res-gcm-signal">
+            All 256 → HTTP 403 → no oracle → attack impossible ✔
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Response breakdown -->
+  <div class="panel">
+    <h2>🔢 Response Code Breakdown</h2>
+    <div id="res-codes-breakdown"></div>
+  </div>
+
+  <!-- Full grid replay -->
+  <div class="panel">
+    <h2>📡 Full Response Grid (256 requests)</h2>
+    <div class="probe-grid" id="res-probe-grid"></div>
+  </div>
+
+</div>

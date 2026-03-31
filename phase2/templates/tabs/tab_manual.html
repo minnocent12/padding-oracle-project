@@ -1,0 +1,122 @@
+<!-- TAB 3 — ATTACKER TOOL
+     JS lives in static/js/tab_manual.js -->
+
+<div class="warning">
+  ⚠ This tab simulates what a real attacker does after obtaining an IV and Ciphertext.
+  Paste any IV + Ciphertext pair (from the Live Attack tab or your own) and probe the server directly.
+</div>
+
+<div class="info" style="margin-bottom:1rem">
+  💡 <strong>How to use this tab:</strong>
+  Run an attack in the <strong>⚔ Live Attack</strong> tab first, then copy the IV and
+  Ciphertext shown there into the fields below. You can also type your own hex values.
+  This tool lets you manually send ciphertext to the oracle and see exactly what the server leaks.
+</div>
+
+<!-- ── Section 1: Manual Oracle Probe ────────────────────────── -->
+<div class="intercept-panel">
+  <div class="intercept-title">🔑 Attacker Has: IV + Ciphertext — Send to Oracle</div>
+  <div class="grid2">
+    <div>
+      <label class="field-label">IV (hex) — paste from Live Attack tab or enter your own:</label>
+      <input id="man-iv" placeholder="e.g. f8800b321a2fa5de03a948e4baf9c134"/>
+    </div>
+    <div>
+      <label class="field-label">Ciphertext (hex) — paste from Live Attack tab or enter your own:</label>
+      <input id="man-ct" placeholder="e.g. 25fc7171783cb0fec71576671498d97f"/>
+    </div>
+  </div>
+  <button class="btn-green" onclick="manualDecrypt()">🔍 Send to Oracle (decrypt)</button>
+  <button class="btn-amber" onclick="scrollToEncrypt()">🔒 Encrypt a new plaintext first</button>
+  <button class="btn-blue"  onclick="clearManual()">✕ Clear</button>
+  <div style="margin-top:.8rem">
+    <label class="field-label">Server Response:</label>
+    <div class="resp-box resp-neutral" id="man-resp">
+      Awaiting request — paste IV + Ciphertext above and click Send to Oracle.
+    </div>
+  </div>
+</div>
+
+<!-- ── Section 2: Encrypt First Helper ───────────────────────── -->
+<div class="panel" id="man-enc-panel">
+  <h2>🔒 Don't Have a Ciphertext? Encrypt Something First</h2>
+  <div class="info" style="margin-bottom:.7rem">
+    This simulates the attacker intercepting traffic — the server encrypts data and
+    the attacker captures the result. Enter a plaintext, encrypt it, then use the
+    resulting IV + Ciphertext in the oracle probe above.
+  </div>
+  <label class="field-label">Plaintext to encrypt:</label>
+  <input id="man-pt" value="secret message" placeholder="Enter plaintext to encrypt"/>
+  <button class="btn-green" onclick="encryptForManual()">🔒 Encrypt via Server</button>
+
+  <div style="margin-top:.7rem;display:none" id="man-enc-result">
+    <div class="grid2">
+      <div class="ct-panel-inner">
+        <div class="ct-label">IV — click to copy to oracle fields above:</div>
+        <div class="ct-value ct-iv-val" id="man-enc-iv"
+             style="cursor:pointer" onclick="copyToManual('iv')"
+             title="Click to copy to IV field above">—</div>
+      </div>
+      <div class="ct-panel-inner">
+        <div class="ct-label">Ciphertext — click to copy to oracle fields above:</div>
+        <div class="ct-value ct-hex-val" id="man-enc-ct"
+             style="cursor:pointer" onclick="copyToManual('ct')"
+             title="Click to copy to Ciphertext field above">—</div>
+      </div>
+    </div>
+    <div class="success-box" style="margin-top:.5rem;display:none" id="man-enc-msg"></div>
+  </div>
+</div>
+
+<!-- ── Section 3: Crafted Block Probe ────────────────────────── -->
+<div class="panel">
+  <h2>🔬 Advanced: Probe with a Crafted IV Block</h2>
+  <div class="info" style="margin-bottom:.7rem">
+    This is exactly what the automated attack does — it crafts a fake IV block with
+    a specific byte value at a specific position and watches for HTTP 200 vs 403.
+    Try it manually to see the oracle in action one guess at a time.
+  </div>
+  <div class="grid3">
+    <div>
+      <label class="field-label">Ciphertext block to target (hex, 32 chars = 16 bytes):</label>
+      <input id="craft-ct" placeholder="Paste ciphertext block here"/>
+    </div>
+    <div>
+      <label class="field-label">Byte position to inject (0–15):</label>
+      <input id="craft-pos" type="number" min="0" max="15" value="15"/>
+    </div>
+    <div>
+      <label class="field-label">Guess value (0–255):</label>
+      <input id="craft-guess" type="number" min="0" max="255" value="0"/>
+    </div>
+  </div>
+  <button class="btn-amber" onclick="craftedProbe()">⚡ Send Crafted Request</button>
+  <button class="btn-blue"  onclick="bruteOneByte()">🔁 Brute-force This Byte (0–255)</button>
+
+  <div style="margin-top:.8rem">
+    <label class="field-label">Crafted Request Sent:</label>
+    <div class="resp-box resp-neutral" id="craft-sent" style="min-height:40px">—</div>
+  </div>
+  <div style="margin-top:.5rem">
+    <label class="field-label">Oracle Response:</label>
+    <div class="resp-box resp-neutral" id="craft-resp">Awaiting crafted request...</div>
+  </div>
+  <div style="margin-top:.5rem;display:none" id="brute-progress">
+    <div class="prog-wrap"><div class="prog-bar" id="brute-bar"></div></div>
+    <div class="dim" style="font-size:.75rem;text-align:center" id="brute-status"></div>
+  </div>
+</div>
+
+<!-- ── What This Proves ───────────────────────────────────────── -->
+<div class="step-card green">
+  <div class="step-title green">🎓 What This Tab Proves</div>
+  <div class="step-body">
+    By using this tab you can see firsthand that:<br/><br/>
+    <strong>1.</strong> The attacker never needs the AES key — only IV + Ciphertext.<br/>
+    <strong>2.</strong> The server willingly decrypts attacker-supplied ciphertext and
+    reveals padding validity through its HTTP response code.<br/>
+    <strong>3.</strong> By brute-forcing one byte position, you can find the correct guess
+    that produces valid padding — the exact oracle signal the automated attack exploits.<br/><br/>
+    Scale this to all 16 bytes × all blocks = full plaintext recovery. That is the entire attack.
+  </div>
+</div>

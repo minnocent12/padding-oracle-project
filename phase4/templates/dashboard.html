@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Phase 4 — Dashboard & Report</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;background:#0d1117;color:#c9d1d9;font-size:.88rem}
+h1{color:#c9d1d9;font-size:1.2rem;margin-bottom:.1rem}
+h2{color:#58a6ff;font-size:.92rem;font-weight:bold;margin-bottom:.5rem}
+h3{color:#e3b341;font-size:.82rem;font-weight:bold;margin-bottom:.35rem}
+
+.top-header{padding:.9rem 1.4rem .4rem;border-bottom:1px solid #21262d}
+.tab-bar{display:flex;border-bottom:2px solid #21262d;background:#0d1117;
+         padding:0 1.4rem;position:sticky;top:0;z-index:100}
+.tab-btn{padding:.65rem 1.2rem;cursor:pointer;font-family:monospace;font-size:.82rem;
+         font-weight:bold;border:none;background:transparent;color:#8b949e;
+         border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab-btn:hover{color:#c9d1d9;background:#161b22}
+.tab-btn.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tab-content{display:none;padding:1.2rem 1.4rem}
+.tab-content.active{display:block}
+
+/* Alerts */
+.info{background:#111d2e;border:1px solid #58a6ff;padding:.45rem .8rem;
+      border-radius:6px;font-size:.78rem;color:#79c0ff;margin:.4rem 0}
+.warning{background:#3d1a1a;border:1px solid #f85149;padding:.55rem .9rem;
+         border-radius:6px;margin-bottom:1rem;font-size:.8rem;color:#ffa198}
+.safe-banner{background:#122d22;border:1px solid #3fb950;padding:.55rem .9rem;
+             border-radius:6px;margin-bottom:.6rem;font-size:.8rem;color:#7ee787}
+.note-box{background:#1e1a2e;border:1px solid #a78bfa;padding:.55rem .9rem;
+          border-radius:6px;font-size:.8rem;color:#c4b5fd;margin:.4rem 0}
+
+/* Layout */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+@media(max-width:1000px){.grid3,.grid4{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.panel{background:#161b22;border:1px solid #21262d;border-radius:8px;
+       padding:.9rem;margin-bottom:1rem}
+
+/* Stat cards */
+.stat-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;
+           padding:.8rem;text-align:center}
+.stat-val{font-size:1.6rem;font-weight:bold;display:block;margin:.2rem 0}
+.stat-lbl{font-size:.7rem;color:#8b949e;display:block}
+.stat-sub{font-size:.68rem;color:#6b7280;display:block;margin-top:.2rem}
+
+/* Server status */
+.server-card{background:#0d1117;border:1px solid #21262d;border-radius:8px;
+             padding:.8rem;display:flex;align-items:center;gap:.8rem}
+.server-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-online {background:#3fb950;box-shadow:0 0 6px #3fb95080}
+.dot-offline{background:#f85149;box-shadow:0 0 6px #f8514980}
+.dot-checking{background:#e3b341;animation:blink .8s ease infinite alternate}
+@keyframes blink{from{opacity:.3}to{opacity:1}}
+.server-info{flex:1}
+.server-name{font-weight:bold;font-size:.82rem}
+.server-detail{font-size:.72rem;color:#8b949e;margin-top:2px}
+
+/* Bar chart */
+.chart-area{position:relative;height:180px;display:flex;align-items:flex-end;
+            gap:2px;padding:0 2px;overflow-x:auto;border-bottom:1px solid #21262d}
+.bar-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;
+          min-width:20px}
+.bar-body{width:100%;border-radius:2px 2px 0 0;transition:height .5s;
+          position:relative;cursor:pointer}
+.bar-body:hover::after{content:attr(data-tip);position:absolute;bottom:105%;
+  left:50%;transform:translateX(-50%);background:#161b22;border:1px solid #30363d;
+  border-radius:4px;padding:3px 7px;font-size:.7rem;white-space:nowrap;
+  color:#c9d1d9;z-index:10}
+.bar-lbl{font-size:.55rem;color:#6b7280;margin-top:3px;text-align:center}
+.chart-ref-line{position:absolute;left:0;right:0;border-top:1px dashed;
+                pointer-events:none;font-size:.65rem;padding-left:3px}
+
+/* Timeline */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:.8rem;padding:.5rem 0;
+         border-left:2px solid #21262d;margin-left:.4rem;padding-left:.8rem;
+         position:relative}
+.tl-item::before{content:'';position:absolute;left:-5px;top:.7rem;
+                 width:8px;height:8px;border-radius:50%;border:2px solid #21262d}
+.tl-item.done::before{background:#3fb950;border-color:#3fb950}
+.tl-item.attack::before{background:#f85149;border-color:#f85149}
+.tl-item.defense::before{background:#58a6ff;border-color:#58a6ff}
+.tl-dot-label{font-size:.8rem;font-weight:bold}
+.tl-detail{font-size:.75rem;color:#8b949e;margin-top:2px}
+
+/* Compare table */
+.cmp-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.cmp-table th{background:#0d1117;color:#8b949e;padding:.45rem .6rem;
+              text-align:left;border-bottom:1px solid #21262d;font-weight:bold}
+.cmp-table td{padding:.4rem .6rem;border-bottom:1px solid #161b22;vertical-align:top}
+.cmp-table tr:hover td{background:#161b2280}
+.td-cbc{color:#f85149}.td-gcm{color:#3fb950}
+
+/* Progress */
+.prog-wrap{background:#21262d;border-radius:4px;height:8px;overflow:hidden;margin:.3rem 0}
+.prog-bar{height:100%;border-radius:4px;transition:width .6s}
+
+/* Buttons */
+button{padding:.42rem 1rem;border-radius:5px;cursor:pointer;font-family:monospace;
+       font-size:.82rem;font-weight:bold;border:none;margin-right:.4rem;margin-bottom:.3rem}
+.btn-blue  {background:#1d4ed8;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-green {background:#238636;color:#fff}.btn-green:hover{background:#2ea043}
+.btn-purple{background:#6d28d9;color:#fff}.btn-purple:hover{background:#7c3aed}
+.btn-red   {background:#b91c1c;color:#fff}.btn-red:hover{background:#dc2626}
+
+/* Step cards */
+.step-card{background:#161b22;border:1px solid #21262d;border-radius:8px;
+           padding:1rem;margin-bottom:.8rem;border-left:4px solid #58a6ff}
+.step-card.red   {border-left-color:#f85149}
+.step-card.green {border-left-color:#3fb950}
+.step-card.amber {border-left-color:#e3b341}
+.step-title{font-size:.9rem;font-weight:bold;margin-bottom:.3rem}
+.step-body{font-size:.8rem;color:#8b949e;line-height:1.6}
+.step-body strong{color:#c9d1d9}
+.divider{border:none;border-top:1px solid #21262d;margin:1rem 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;
+       font-weight:bold;margin-right:.3rem}
+.badge-red  {background:#3d1a1a;border:1px solid #f85149;color:#ffa198}
+.badge-green{background:#122d22;border:1px solid #3fb950;color:#7ee787}
+.badge-blue {background:#111d2e;border:1px solid #58a6ff;color:#79c0ff}
+
+/* Misc */
+.dim{color:#8b949e}.green{color:#3fb950}.red{color:#f85149}
+.blue{color:#58a6ff}.yellow{color:#e3b341}.bold{font-weight:bold}
+.spinner{display:inline-block;width:11px;height:11px;border:2px solid #30363d;
+         border-top-color:#58a6ff;border-radius:50%;
+         animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="top-header">
+  <h1>📊 Phase 4 — Dashboard & Report</h1>
+  <p class="dim" style="font-size:.78rem;margin-top:.2rem">
+    Live analytics · All phases · Connected to ports 5000, 5001, 5002
+  </p>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('overview', this)">🏠 Overview</button>
+  <button class="tab-btn"        onclick="switchTab('stats',    this)">📈 Attack Stats</button>
+  <button class="tab-btn"        onclick="switchTab('compare',  this)">⚖ CBC vs GCM</button>
+  <button class="tab-btn"        onclick="switchTab('timeline', this)">📅 Timeline</button>
+  <button class="tab-btn"        onclick="switchTab('report',   this)">📄 Report</button>
+</div>
+
+
+<!-- ══════════════════════════════════ TAB 1: OVERVIEW -->
+<div id="tab-overview" class="tab-content active">
+
+  <div class="info" style="margin-bottom:1rem">
+    <span class="spinner"></span> Loading live data from all servers...
+    <span id="overview-ts" class="dim" style="margin-left:.5rem"></span>
+    <button class="btn-blue" onclick="loadAll()" style="margin-left:.6rem;padding:.2rem .7rem;font-size:.75rem">↺ Refresh</button>
+  </div>
+
+  <!-- Server status -->
+  <div class="panel">
+    <h2>🖥 Server Status</h2>
+    <div class="grid3" id="server-status-grid">
+      <div class="server-card">
+        <div class="server-dot dot-checking" id="dot-cbc"></div>
+        <div class="server-info">
+          <div class="server-name">Phase 1 — AES-CBC</div>
+          <div class="server-detail" id="detail-cbc">Checking port 5000...</div>
+        </div>
+      </div>
+      <div class="server-card">
+        <div class="server-dot dot-checking" id="dot-p2"></div>
+        <div class="server-info">
+          <div class="server-name">Phase 2 — Attack Visualizer</div>
+          <div class="server-detail" id="detail-p2">Checking port 5002...</div>
+        </div>
+      </div>
+      <div class="server-card">
+        <div class="server-dot dot-checking" id="dot-gcm"></div>
+        <div class="server-info">
+          <div class="server-name">Phase 3 — AES-GCM</div>
+          <div class="server-detail" id="detail-gcm">Checking port 5001...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key stats -->
+  <div class="panel">
+    <h2>⚡ Attack at a Glance</h2>
+    <div class="grid4" id="key-stats">
+      <div class="stat-card">
+        <span class="stat-val green" id="ov-total">—</span>
+        <span class="stat-lbl">Total Oracle Queries</span>
+        <span class="stat-sub">Phase 2 attack</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val yellow" id="ov-avg">—</span>
+        <span class="stat-lbl">Avg Queries / Byte</span>
+        <span class="stat-sub">max 256, expected ~128</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val blue" id="ov-bytes">—</span>
+        <span class="stat-lbl">Bytes Recovered</span>
+        <span class="stat-sub">without the key</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="ov-match" style="color:#8b949e">—</span>
+        <span class="stat-lbl">Recovery Match</span>
+        <span class="stat-sub">target vs recovered</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="grid3">
+    <div class="step-card red">
+      <div class="step-title red">⚔ Phase 1 & 2 — The Attack</div>
+      <div class="step-body">
+        AES-CBC with PKCS#7 padding leaks information through HTTP response codes.
+        The attacker needs only the IV and ciphertext to recover the full plaintext —
+        <strong>no key required</strong>. Average ~128 queries per byte.
+      </div>
+    </div>
+    <div class="step-card green">
+      <div class="step-title green">🛡 Phase 3 — The Defense</div>
+      <div class="step-body">
+        AES-GCM uses authenticated encryption. The 128-bit auth tag is verified
+        before decryption begins. Every tampered request returns the same HTTP 403 —
+        <strong>no oracle signal, attack impossible</strong>.
+      </div>
+    </div>
+    <div class="step-card" style="border-left-color:#a78bfa">
+      <div class="step-title" style="color:#a78bfa">📊 Phase 4 — This Dashboard</div>
+      <div class="step-body">
+        Live analytics across all phases. Attack stats visualized, CBC vs GCM
+        compared side by side, and a full project report exportable as PDF.
+        <strong>All data pulled live from running servers.</strong>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════ TAB 2: ATTACK STATS -->
+<div id="tab-stats" class="tab-content">
+
+  <div class="panel">
+    <h2>🎯 Attack Details</h2>
+    <div class="grid4">
+      <div class="stat-card">
+        <span class="stat-val green"  id="st-total">—</span>
+        <span class="stat-lbl">Total Queries</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val yellow" id="st-avg">—</span>
+        <span class="stat-lbl">Avg / Byte</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val red"    id="st-max">—</span>
+        <span class="stat-lbl">Max / Byte</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val green"  id="st-min">—</span>
+        <span class="stat-lbl">Min / Byte</span>
+      </div>
+    </div>
+    <div style="margin-top:.6rem;font-size:.8rem" id="st-target-row"></div>
+  </div>
+
+  <!-- Bar chart -->
+  <div class="panel">
+    <h2>📊 Oracle Queries per Byte</h2>
+    <div class="info" style="margin-bottom:.6rem;font-size:.74rem">
+      Each bar = one plaintext byte. Height = how many oracle queries were needed.
+      <span class="green">≤100</span> · <span class="blue">101–200</span> · <span class="red">&gt;200</span>
+      · Dashed lines = average and 128 midpoint.
+    </div>
+    <div class="chart-area" id="main-chart">
+      <span class="dim" style="margin:auto;font-size:.8rem">Loading chart...</span>
+    </div>
+    <div style="font-size:.74rem;color:#8b949e;margin-top:.4rem">
+      Worst case: <span class="dim" id="st-worst">—</span> queries ·
+      Efficiency vs worst: <span class="green" id="st-eff">—</span>
+    </div>
+  </div>
+
+  <!-- Efficiency progress bars -->
+  <div class="panel">
+    <h2>📉 Query Distribution</h2>
+    <div id="query-dist"></div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════ TAB 3: CBC VS GCM -->
+<div id="tab-compare" class="tab-content">
+
+  <div class="panel">
+    <h2>⚖ Side-by-Side Comparison</h2>
+    <table class="cmp-table">
+      <tr>
+        <th>Property</th>
+        <th>AES-CBC — Phase 1 (Vulnerable)</th>
+        <th>AES-GCM — Phase 3 (Secure)</th>
+      </tr>
+      <tr><td>Mode</td>
+          <td class="td-cbc">Cipher Block Chaining</td>
+          <td class="td-gcm">Galois/Counter Mode</td></tr>
+      <tr><td>Padding</td>
+          <td class="td-cbc">PKCS#7 — required, exploitable</td>
+          <td class="td-gcm">None — CTR stream cipher</td></tr>
+      <tr><td>Authentication</td>
+          <td class="td-cbc">None</td>
+          <td class="td-gcm">128-bit GHASH tag</td></tr>
+      <tr><td>Order of operations</td>
+          <td class="td-cbc">Decrypt → check padding → respond</td>
+          <td class="td-gcm">Verify tag → reject or decrypt</td></tr>
+      <tr><td>Tampered ciphertext</td>
+          <td class="td-cbc">HTTP 200 or 403 (oracle signal) <span class="badge badge-red">Leaks info</span></td>
+          <td class="td-gcm">Always HTTP 403 <span class="badge badge-green">Silent</span></td></tr>
+      <tr><td>256 oracle guesses</td>
+          <td class="td-cbc">~1 HTTP 200 → byte recovered</td>
+          <td class="td-gcm">256 × HTTP 403 → nothing learned</td></tr>
+      <tr><td>Full attack (16 bytes)</td>
+          <td class="td-cbc">~2048 requests → plaintext exposed</td>
+          <td class="td-gcm">Impossible</td></tr>
+      <tr><td>Key size used here</td>
+          <td class="td-cbc">128-bit AES</td>
+          <td class="td-gcm">256-bit AES</td></tr>
+    </table>
+  </div>
+
+  <!-- Live comparison: actual queries vs GCM silence -->
+  <div class="grid2">
+    <div class="panel">
+      <h2 style="color:#f85149">⚔ CBC — Oracle Query Distribution</h2>
+      <div class="safe-banner" style="background:#3d1a1a;border-color:#f85149;color:#ffa198">
+        Each byte required 1–256 oracle queries. One HTTP 200 per byte leaked info.
+      </div>
+      <div id="cbc-dist-chart" style="margin-top:.6rem"></div>
+    </div>
+    <div class="panel">
+      <h2 style="color:#3fb950">🛡 GCM — Oracle Probe Results</h2>
+      <div class="safe-banner">
+        All 16 sample requests returned HTTP 403. Zero information leaked.
+      </div>
+      <div id="gcm-probe-result" style="margin-top:.6rem">
+        <button class="btn-green" onclick="loadGcmProbe()">▶ Run GCM Probe Sample</button>
+        <div id="gcm-probe-display" style="margin-top:.6rem"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════ TAB 4: TIMELINE -->
+<div id="tab-timeline" class="tab-content">
+
+  <div class="panel">
+    <h2>📅 Project Timeline</h2>
+    <div class="timeline">
+
+      <div class="tl-item done">
+        <div>
+          <div class="tl-dot-label green">Phase 1 — Vulnerable AES-CBC Server</div>
+          <div class="tl-detail">
+            Built a Flask server on port 5000 implementing AES-128-CBC.
+            Server leaks padding validity: HTTP 200 (valid) vs HTTP 403 (invalid).
+            This intentional leak creates the padding oracle.
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-item attack">
+        <div>
+          <div class="tl-dot-label red">Phase 2 — Padding Oracle Attack</div>
+          <div class="tl-detail" id="tl-phase2-detail">
+            Implemented byte-wise padding oracle attack. Live browser visualization
+            with SSE streaming. Attacker Tool tab for manual oracle probing.
+            GCM attack section added to prove the defense works.
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-item defense">
+        <div>
+          <div class="tl-dot-label blue">Phase 3 — AES-GCM Defense</div>
+          <div class="tl-detail">
+            Built a secure Flask server on port 5001 using AES-256-GCM.
+            Authentication tag verified before decryption. Generic errors always.
+            Live pipeline visualization for encryption and decryption steps.
+          </div>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div>
+          <div class="tl-dot-label" style="color:#a78bfa">Phase 4 — Dashboard & Report</div>
+          <div class="tl-detail">
+            Live analytics dashboard pulling data from all running servers.
+            Attack stats, CBC vs GCM comparison, project timeline, and
+            exportable full PDF report with all findings and recommendations.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Attack replay -->
+  <div class="panel">
+    <h2>⏱ Attack Progress Replay</h2>
+    <div class="info" style="margin-bottom:.6rem">
+      Simulates how the attack progressed byte by byte based on the recorded stats.
+    </div>
+    <button class="btn-red"  id="btn-replay" onclick="startReplay()">▶ Replay Attack</button>
+    <button class="btn-blue" onclick="resetReplay()">↺ Reset</button>
+    <div style="margin-top:.8rem">
+      <div class="prog-wrap">
+        <div class="prog-bar" id="replay-bar" style="background:#f85149"></div>
+      </div>
+      <div class="dim" style="font-size:.74rem;text-align:center;margin-top:.2rem"
+           id="replay-status">Press Replay to watch the attack unfold byte by byte.</div>
+    </div>
+    <div id="replay-grid" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:.6rem"></div>
+    <div style="margin-top:.5rem;font-size:.85rem">
+      Recovered so far: <span class="green bold" id="replay-text" style="letter-spacing:.05em">—</span>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════ TAB 5: REPORT -->
+<div id="tab-report" class="tab-content">
+
+  <div class="panel">
+    <h2>📄 Full Project Report</h2>
+    <div class="info" style="margin-bottom:.8rem">
+      The report includes all phases, attack results, CBC vs GCM analysis,
+      and security recommendations. Generated live from current server data.
+    </div>
+    <button class="btn-purple" onclick="exportPDF()">
+      ⬇ Export Full Report as PDF
+    </button>
+    <div class="dim" style="font-size:.75rem;margin-top:.4rem" id="pdf-status"></div>
+  </div>
+
+  <!-- Report preview -->
+  <div class="panel">
+    <h2>📋 Report Preview</h2>
+
+    <h3>Executive Summary</h3>
+    <div class="step-card">
+      <div class="step-body">
+        This project demonstrates the Padding Oracle Attack against AES-CBC encryption
+        and its complete defense using AES-GCM. The attack exploits the combination of
+        CBC mode and leaky padding error responses to recover plaintext without the key.
+        Phase 3 proves that authenticated encryption (AES-GCM) eliminates the attack entirely.
+      </div>
+    </div>
+
+    <h3 style="margin-top:.8rem">Phase 1 — Vulnerable Server</h3>
+    <div class="step-card red">
+      <div class="step-body">
+        AES-128-CBC server on port 5000. Returns HTTP 200 for valid padding,
+        HTTP 403 for invalid — creating a padding oracle that leaks one byte
+        of information per up to 256 HTTP requests.
+      </div>
+    </div>
+
+    <h3 style="margin-top:.8rem">Phase 2 — The Attack</h3>
+    <div class="step-card red">
+      <div class="step-body" id="rpt-phase2">
+        Loading attack stats...
+      </div>
+    </div>
+
+    <h3 style="margin-top:.8rem">Phase 3 — The Defense</h3>
+    <div class="step-card green">
+      <div class="step-body">
+        AES-256-GCM server on port 5001. Authentication tag verified before
+        decryption. All tampered requests return identical HTTP 403.
+        No oracle signal — attack impossible.
+      </div>
+    </div>
+
+    <h3 style="margin-top:.8rem">Conclusions & Recommendations</h3>
+    <div class="step-card" style="border-left-color:#a78bfa">
+      <div class="step-body">
+        <strong>1.</strong> Never use AES-CBC for new systems — use AES-GCM or another AEAD cipher.<br/>
+        <strong>2.</strong> Always authenticate before decrypting — verify integrity first.<br/>
+        <strong>3.</strong> Return generic errors — never differentiate failure modes in responses.<br/>
+        <strong>4.</strong> Use constant-time comparisons to prevent timing oracles.<br/><br/>
+        Real-world impact: POODLE (CVE-2014-3566), Lucky Thirteen (CVE-2013-0169),
+        ASP.NET Padding Oracle (CVE-2010-3332).
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  btn.classList.add("active");
+}
+
+// ── Load all data on page load ────────────────────────────────
+async function loadAll() {
+  await Promise.all([loadStatus(), loadStats()]);
+  document.getElementById("overview-ts").textContent =
+    "Last updated: " + new Date().toLocaleTimeString();
+}
+
+// ── Server status ─────────────────────────────────────────────
+async function loadStatus() {
+  try {
+    const r = await fetch("/api/status");
+    const d = await r.json();
+
+    setDot("cbc",  d.cbc.online,  d.cbc.online  ? "Port 5000 — Online" : "Port 5000 — Offline");
+    setDot("gcm",  d.gcm.online,  d.gcm.online  ? "Port 5001 — Online" : "Port 5001 — Offline");
+
+    // Phase 2 check via same-origin
+    try {
+      const r2 = await fetch("/api/stats");
+      setDot("p2", r2.ok, r2.ok ? "Port 5002 — Stats available" : "Port 5002 — No stats yet");
+    } catch { setDot("p2", false, "Port 5002 — Offline"); }
+
+  } catch(e) {
+    ["cbc","gcm","p2"].forEach(k => setDot(k, false, "Check failed"));
+  }
+}
+
+function setDot(key, online, detail) {
+  const dot = document.getElementById("dot-" + key);
+  const det = document.getElementById("detail-" + key);
+  dot.className = "server-dot " + (online ? "dot-online" : "dot-offline");
+  if (det) det.textContent = detail;
+}
+
+// ── Attack stats ──────────────────────────────────────────────
+let statsData = null;
+
+async function loadStats() {
+  try {
+    const r = await fetch("/api/stats");
+    if (!r.ok) {
+      setStatsUnavailable();
+      return;
+    }
+    const d = await r.json();
+    statsData = d;
+
+    // Overview tab
+    document.getElementById("ov-total").textContent  = d.total_queries;
+    document.getElementById("ov-avg").textContent    = d.avg;
+    document.getElementById("ov-bytes").textContent  = d.n_bytes;
+    const matchEl = document.getElementById("ov-match");
+    matchEl.textContent  = d.target === d.recovered ? "✔ YES" : "✘ NO";
+    matchEl.style.color  = d.target === d.recovered ? "#3fb950" : "#f85149";
+
+    // Stats tab
+    document.getElementById("st-total").textContent = d.total_queries;
+    document.getElementById("st-avg").textContent   = d.avg;
+    document.getElementById("st-max").textContent   = d.max_q;
+    document.getElementById("st-min").textContent   = d.min_q;
+    document.getElementById("st-worst").textContent = d.worst_case;
+    document.getElementById("st-eff").textContent   = d.efficiency + "%";
+    document.getElementById("st-target-row").innerHTML =
+      `Target: <span class="red">"${d.target}"</span> &nbsp;·&nbsp; ` +
+      `Recovered: <span class="green">"${d.recovered}"</span> &nbsp;·&nbsp; ` +
+      `Match: <span class="${d.target===d.recovered?"green":"red"}">${d.target===d.recovered?"✔ YES":"✘ NO"}</span>`;
+
+    buildChart(d.per_byte);
+    buildQueryDist(d.per_byte);
+    buildCBCDistChart(d.per_byte);
+    buildReplayGrid(d.per_byte, d.target);
+
+    // Report tab
+    document.getElementById("rpt-phase2").innerHTML =
+      `Target: <strong>"${d.target}"</strong> → Recovered: <strong>"${d.recovered}"</strong><br/>` +
+      `Total oracle queries: <strong>${d.total_queries}</strong> · ` +
+      `Average per byte: <strong>${d.avg}</strong> · ` +
+      `Bytes recovered: <strong>${d.n_bytes}</strong> without the secret key.`;
+
+    // Timeline
+    document.getElementById("tl-phase2-detail").innerHTML =
+      `Attack recovered <strong>"${d.recovered}"</strong> using ${d.total_queries} oracle ` +
+      `queries across ${d.n_bytes} bytes. Average ${d.avg} queries per byte.`;
+
+  } catch(e) {
+    setStatsUnavailable();
+  }
+}
+
+function setStatsUnavailable() {
+  ["ov-total","ov-avg","ov-bytes"].forEach(id => {
+    document.getElementById(id).textContent = "—";
+  });
+  document.getElementById("main-chart").innerHTML =
+    '<span class="dim" style="margin:auto;font-size:.8rem">Run Phase 2 attack first to generate stats.</span>';
+}
+
+// ── Main bar chart ────────────────────────────────────────────
+function buildChart(perByte) {
+  const chart = document.getElementById("main-chart");
+  if (!perByte || !perByte.length) {
+    chart.innerHTML = '<span class="dim" style="margin:auto">No data</span>';
+    return;
+  }
+  const maxQ = Math.max(...perByte, 1);
+  const avg  = perByte.reduce((a,b)=>a+b,0) / perByte.length;
+  const h    = 180;
+
+  // Reference lines
+  const avgPct = Math.round(avg   / maxQ * 100);
+  const midPct = Math.round(128   / maxQ * 100);
+
+  chart.style.position = "relative";
+  const avgLine = document.createElement("div");
+  avgLine.className = "chart-ref-line";
+  avgLine.style.cssText = `bottom:${avgPct}%;border-color:#3fb950;color:#3fb950`;
+  avgLine.textContent = `avg ${avg.toFixed(1)}`;
+  chart.appendChild(avgLine);
+
+  const midLine = document.createElement("div");
+  midLine.className = "chart-ref-line";
+  midLine.style.cssText = `bottom:${midPct}%;border-color:#f8514980;color:#f85149`;
+  midLine.textContent = "128";
+  chart.appendChild(midLine);
+
+  perByte.forEach((q, i) => {
+    const pct = Math.round(q / maxQ * 100);
+    const col = q > 200 ? "#f85149" : q > 100 ? "#58a6ff" : "#3fb950";
+    const wrap = document.createElement("div");
+    wrap.className = "bar-wrap";
+    wrap.style.width = `${Math.max(100/perByte.length, 14)}px`;
+    wrap.innerHTML = `
+      <div class="bar-body" style="height:${pct}%;background:${col}"
+           data-tip="Byte ${i}: ${q} queries"></div>
+      <div class="bar-lbl">${i}</div>`;
+    chart.appendChild(wrap);
+  });
+}
+
+// ── Query distribution ────────────────────────────────────────
+function buildQueryDist(perByte) {
+  const dist = document.getElementById("query-dist");
+  if (!perByte || !perByte.length) return;
+  const n   = perByte.length;
+  const lo  = perByte.filter(q=>q<=100).length;
+  const mid = perByte.filter(q=>q>100&&q<=200).length;
+  const hi  = perByte.filter(q=>q>200).length;
+  dist.innerHTML = [
+    ["≤ 100 queries (efficient)", lo,  n, "#3fb950"],
+    ["101–200 queries (average)", mid, n, "#58a6ff"],
+    ["> 200 queries (expensive)", hi,  n, "#f85149"],
+  ].map(([lbl, count, total, col]) => `
+    <div style="margin-bottom:.6rem">
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:3px">
+        <span style="color:${col}">${lbl}</span>
+        <span class="dim">${count} / ${total} bytes (${Math.round(count/total*100)}%)</span>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-bar" style="width:${Math.round(count/total*100)}%;background:${col}"></div>
+      </div>
+    </div>`).join("");
+}
+
+// ── CBC distribution mini chart ───────────────────────────────
+function buildCBCDistChart(perByte) {
+  const el = document.getElementById("cbc-dist-chart");
+  if (!perByte || !perByte.length) return;
+  const maxQ = Math.max(...perByte, 1);
+  el.style.cssText = "display:flex;align-items:flex-end;gap:2px;height:80px;border-bottom:1px solid #21262d";
+  perByte.forEach((q, i) => {
+    const pct = Math.round(q / maxQ * 100);
+    const col = q > 200 ? "#f85149" : q > 100 ? "#58a6ff" : "#3fb950";
+    el.innerHTML += `<div style="flex:1;height:${pct}%;background:${col};border-radius:2px 2px 0 0;min-width:4px" title="Byte ${i}: ${q}"></div>`;
+  });
+}
+
+// ── GCM probe ─────────────────────────────────────────────────
+async function loadGcmProbe() {
+  const el = document.getElementById("gcm-probe-display");
+  el.innerHTML = '<span class="dim" style="font-size:.8rem"><span class="spinner"></span>Sending 16 tampered requests to GCM server...</span>';
+  try {
+    const r = await fetch("/api/gcm_probe");
+    const d = await r.json();
+    if (d.error) { el.innerHTML = `<span class="red">${d.error}</span>`; return; }
+    const grid = d.results.map(code =>
+      `<div style="display:inline-block;padding:2px 6px;border-radius:3px;font-size:.72rem;
+       font-weight:bold;margin:2px;background:#3d1a1a;color:#f85149;
+       border:1px solid #f8514940">HTTP ${code}</div>`
+    ).join("");
+    el.innerHTML = grid +
+      `<div class="safe-banner" style="margin-top:.6rem">
+        ✔ All ${d.results.length} responses: HTTP 403 · Unique codes: ${d.unique.join(", ")} ·
+        Oracle signal: <strong>${d.silent ? "None — attack impossible" : "DETECTED"}</strong>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<span class="red">Cannot reach GCM server: ${e.message}</span>`;
+  }
+}
+
+// ── Attack replay ─────────────────────────────────────────────
+let replayHandle = null;
+
+function buildReplayGrid(perByte, target) {
+  if (!perByte) return;
+  const grid = document.getElementById("replay-grid");
+  grid.innerHTML = "";
+  for (let i = 0; i < perByte.length; i++) {
+    const cell = document.createElement("div");
+    cell.id = `rc-${i}`;
+    cell.style.cssText = "width:36px;height:44px;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #30363d;background:#161b22;color:#6b7280;font-size:.75rem;font-weight:bold";
+    cell.innerHTML = `<span style="font-size:.55rem;color:#6b7280">[${i}]</span><span>?</span>`;
+    grid.appendChild(cell);
+  }
+}
+
+async function startReplay() {
+  if (!statsData) { alert("Load stats first."); return; }
+  resetReplay();
+  document.getElementById("btn-replay").disabled = true;
+  const per   = statsData.per_byte;
+  const tgt   = statsData.target || "";
+  const total = statsData.total_queries;
+  let   cum   = 0;
+  const bar   = document.getElementById("replay-bar");
+  const stat  = document.getElementById("replay-status");
+  const rtxt  = document.getElementById("replay-text");
+
+  // Attack goes right to left but display left to right
+  const order = Array.from({length: per.length}, (_, i) => per.length - 1 - i);
+
+  for (const idx of order) {
+    cum += per[idx];
+    bar.style.width = `${Math.round(cum / total * 100)}%`;
+    const ch  = tgt[idx] || "?";
+    const col = per[idx] > 200 ? "#f85149" : per[idx] > 100 ? "#58a6ff" : "#3fb950";
+    const cell = document.getElementById(`rc-${idx}`);
+    if (cell) {
+      cell.style.background   = "#2d1f0a";
+      cell.style.borderColor  = "#e3b341";
+      cell.style.color        = "#e3b341";
+      cell.innerHTML = `<span style="font-size:.55rem">[${idx}]</span><span>?</span>`;
+    }
+    stat.textContent = `Attacking byte [${idx}] — ${per[idx]} queries...`;
+    await new Promise(r => setTimeout(r, 120));
+    if (cell) {
+      cell.style.background  = "#0a1a0e";
+      cell.style.borderColor = col;
+      cell.style.color       = col;
+      cell.innerHTML = `<span style="font-size:.55rem">[${idx}]</span><span>${ch}</span><span style="font-size:.55rem">${per[idx]}q</span>`;
+    }
+    // Build recovered text so far
+    let so_far = "";
+    for (let j = 0; j < per.length; j++) {
+      const c = document.getElementById(`rc-${j}`);
+      so_far += (c && c.style.borderColor !== "rgb(48, 54, 61)") ? (tgt[j]||"?") : "·";
+    }
+    rtxt.textContent = so_far;
+    await new Promise(r => setTimeout(r, 60));
+  }
+
+  stat.textContent = `✔ Attack complete — "${statsData.recovered}" recovered in ${total} queries`;
+  document.getElementById("btn-replay").disabled = false;
+}
+
+function resetReplay() {
+  if (replayHandle) clearInterval(replayHandle);
+  document.getElementById("replay-bar").style.width = "0";
+  document.getElementById("replay-status").textContent = "Press Replay to watch the attack unfold.";
+  document.getElementById("replay-text").textContent  = "—";
+  if (statsData) buildReplayGrid(statsData.per_byte, statsData.target);
+  document.getElementById("btn-replay").disabled = false;
+}
+
+// ── PDF export ────────────────────────────────────────────────
+async function exportPDF() {
+  document.getElementById("pdf-status").textContent = "⏳ Generating PDF report...";
+  try {
+    const r = await fetch("/export/pdf");
+    if (!r.ok) throw new Error("Server error");
+    const blob = await r.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = "padding_oracle_report.pdf";
+    a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById("pdf-status").textContent = "✔ PDF downloaded successfully.";
+  } catch(e) {
+    document.getElementById("pdf-status").textContent = "❌ Error: " + e.message;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>

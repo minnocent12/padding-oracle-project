@@ -1,0 +1,15 @@
+# Web framework
+flask==3.0.3
+
+# Cryptography
+pycryptodome==3.20.0
+cryptography==46.0.5
+
+# Attack & visualization
+requests==2.31.0
+matplotlib==3.9.0
+rich==13.7.1        # Pretty terminal output for attack progress
+reportlab==4.4.10
+
+# Environment variables
+python-dotenv==1.0.1

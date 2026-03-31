@@ -1,0 +1,120 @@
+<!-- TAB 2 — DECRYPTION
+     JS lives in static/js/tab_decrypt.js -->
+
+<div class="safe-banner">
+  🔓 AES-256-GCM decryption — the auth tag is verified <strong>before</strong>
+  decryption begins. Any tampering is caught immediately.
+</div>
+
+<!-- Input -->
+<div class="panel">
+  <h2>🔑 Enter Ciphertext Values</h2>
+  <div class="info" style="margin-bottom:.6rem">
+    These fields are auto-filled when you encrypt in the <strong>🔒 Encryption</strong> tab.
+    You can also paste your own values or modify any field to simulate tampering.
+  </div>
+  <div class="grid3">
+    <div>
+      <label class="field-label">Nonce (hex):</label>
+      <input id="dec-nonce" placeholder="Paste nonce here"/>
+    </div>
+    <div>
+      <label class="field-label">Ciphertext (hex):</label>
+      <input id="dec-ct" placeholder="Paste ciphertext here"/>
+    </div>
+    <div>
+      <label class="field-label">Auth Tag (hex):</label>
+      <input id="dec-tag" placeholder="Paste auth tag here"/>
+    </div>
+  </div>
+  <button class="btn-green" id="btn-decrypt"        onclick="runDecrypt(false)">🔓 Decrypt</button>
+  <button class="btn-red"   id="btn-tamper-decrypt" onclick="runDecrypt(true)">⚡ Tamper Then Decrypt</button>
+  <button class="btn-blue"  onclick="resetDecrypt()">↺ Reset</button>
+  <div class="dim" style="font-size:.75rem;margin-top:.3rem" id="dec-tamper-note" style="display:none"></div>
+</div>
+
+<!-- Live pipeline -->
+<div class="panel">
+  <h2>⚙️ Decryption Pipeline — Live Steps</h2>
+  <div class="info" style="margin-bottom:.8rem">
+    Watch the server work through each step. Notice that tag verification happens
+    <strong>before</strong> any decryption attempt.
+  </div>
+
+  <div class="pipeline">
+
+    <!-- Step 1 -->
+    <div class="pipe-step" id="dec-s1">
+      <div class="pipe-header">
+        <span class="pipe-icon">📥</span>
+        <span class="pipe-title">Step 1 — Receive Nonce + Ciphertext + Tag</span>
+        <span class="pipe-status ps-waiting" id="dec-s1-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        The server receives all three required values from the client.
+        <div class="pipe-value" id="dec-s1-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="pipe-step" id="dec-s2">
+      <div class="pipe-header">
+        <span class="pipe-icon">🔏</span>
+        <span class="pipe-title">Step 2 — Recompute GHASH Tag</span>
+        <span class="pipe-status ps-waiting" id="dec-s2-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        The server independently recomputes the GHASH authentication tag
+        over the received ciphertext using the secret key.
+        <strong>Decryption has not started yet.</strong>
+        <div class="pipe-value" id="dec-s2-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="pipe-step" id="dec-s3">
+      <div class="pipe-header">
+        <span class="pipe-icon">✅</span>
+        <span class="pipe-title">Step 3 — Compare Tags (Constant-Time)</span>
+        <span class="pipe-status ps-waiting" id="dec-s3-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        The computed tag is compared to the received tag in <strong>constant time</strong>
+        to prevent timing attacks. If they do not match, the request is rejected here —
+        no decryption, no error details, no oracle.
+        <div class="pipe-value" id="dec-s3-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="pipe-step" id="dec-s4">
+      <div class="pipe-header">
+        <span class="pipe-icon">🔓</span>
+        <span class="pipe-title">Step 4 — AES-256 Decryption (CTR mode)</span>
+        <span class="pipe-status ps-waiting" id="dec-s4-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        Only reached if the tag matched. The server decrypts using AES-CTR mode
+        with the nonce and secret key. No padding to check — no padding oracle possible.
+        <div class="pipe-value" id="dec-s4-val"></div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="pipe-step" id="dec-s5">
+      <div class="pipe-header">
+        <span class="pipe-icon">📤</span>
+        <span class="pipe-title">Step 5 — Return Result</span>
+        <span class="pipe-status ps-waiting" id="dec-s5-status">Waiting</span>
+      </div>
+      <div class="pipe-body">
+        The plaintext is returned to the client.
+        <div class="pipe-value" id="dec-s5-val"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Result banner -->
+<div class="result-banner" id="dec-result"></div>

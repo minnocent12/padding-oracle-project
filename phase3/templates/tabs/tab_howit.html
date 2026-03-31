@@ -1,0 +1,229 @@
+<!-- TAB 3 — HOW IT WORKS
+     Static educational content — no JS required -->
+
+<div class="info" style="margin-bottom:1rem">
+  This tab explains how AES-GCM works, why it is secure against padding oracle attacks,
+  and how it compares to the vulnerable AES-CBC server in Phase 1 and Phase 2.
+</div>
+
+<!-- What is GCM -->
+<div class="step-card green">
+  <div class="step-num">💡</div>
+  <div class="step-title green">🧠 What Is AES-GCM?</div>
+  <div class="step-body">
+    AES-GCM (Galois/Counter Mode) is an <strong>authenticated encryption</strong> algorithm.
+    Unlike AES-CBC which only encrypts, GCM both encrypts <em>and</em> authenticates —
+    it produces a cryptographic proof that the ciphertext has not been tampered with.<br/><br/>
+    This single property is what makes padding oracle attacks impossible against GCM.
+    There is no padding, and any tampered ciphertext is rejected before decryption begins.
+  </div>
+</div>
+
+<!-- How it works step by step -->
+<h2 style="margin-bottom:.6rem">🔄 How AES-GCM Works — Step by Step</h2>
+
+<div class="step-card">
+  <div class="step-num">1</div>
+  <div class="step-title blue">Random Nonce Generation</div>
+  <div class="step-body">
+    Every encryption starts with a fresh <strong>96-bit (12-byte) random nonce</strong>.
+    The nonce is never reused — reusing a nonce with the same key would catastrophically
+    break GCM's security guarantees.
+    <div class="code-block"><span class="hl-green">nonce = os.urandom(12)</span>   <span class="hl-amber"># 96-bit, unique per message</span>
+
+Unlike CBC's IV, the GCM nonce does not need to be unpredictable —
+it only needs to be unique. But random is the safest choice.</div>
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card">
+  <div class="step-num">2</div>
+  <div class="step-title blue">AES-CTR Encryption (No Padding)</div>
+  <div class="step-body">
+    GCM uses AES in <strong>Counter (CTR) mode</strong> — a stream cipher mode that
+    generates a keystream and XORs it with the plaintext.
+    <strong>No padding is required</strong> because CTR mode works on arbitrary-length data.
+    <div class="code-block"><span class="hl-amber">Plaintext</span>: "Hello"  (5 bytes)
+
+CTR generates a keystream:  <span class="hl-purple">K1 K2 K3 K4 K5</span>
+Ciphertext = Plaintext ⊕ Keystream
+
+<span class="hl-green">No PKCS#7 padding. No padding oracle. No vulnerability.</span></div>
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card amber">
+  <div class="step-num">3</div>
+  <div class="step-title yellow">GHASH — Computing the Auth Tag</div>
+  <div class="step-body">
+    Simultaneously with encryption, GCM computes a <strong>128-bit authentication tag</strong>
+    using the GHASH function over the ciphertext and the key.
+    <div class="code-block"><span class="hl-blue">GHASH(key, ciphertext)</span>  →  <span class="hl-amber">128-bit tag</span>
+
+The tag is a mathematical fingerprint of:
+  - The ciphertext
+  - The secret key
+  - The nonce
+
+<span class="hl-red">Change any one of these → completely different tag</span>
+<span class="hl-green">Tag matches → ciphertext is authentic and unmodified</span></div>
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card green">
+  <div class="step-num">4</div>
+  <div class="step-title green">Decryption — Authenticate BEFORE Decrypt</div>
+  <div class="step-body">
+    On decryption the server <strong>recomputes the tag first</strong> and compares it
+    to the received tag in constant time. Decryption only happens if they match.
+    <div class="code-block"><span class="hl-blue">Received:</span>  nonce + ciphertext + tag
+
+<span class="hl-amber">Step 1:</span>  recompute_tag = GHASH(key, received_ciphertext)
+<span class="hl-amber">Step 2:</span>  compare recompute_tag vs received_tag  <span class="hl-amber">(constant time)</span>
+
+  <span class="hl-red">Mismatch</span>  →  HTTP 403 generic error — decryption never runs
+  <span class="hl-green">Match</span>     →  AES-CTR decrypt → return plaintext</div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- Why padding oracle is impossible -->
+<h2 style="margin-bottom:.7rem">🛡️ Why Padding Oracle Is Impossible Against GCM</h2>
+
+<div class="two-col">
+  <div>
+    <div class="step-card red">
+      <div class="step-title red">AES-CBC — How the Oracle Works</div>
+      <div class="step-body">
+        <strong>1.</strong> Attacker sends crafted ciphertext<br/>
+        <strong>2.</strong> Server decrypts with secret key<br/>
+        <strong>3.</strong> Server checks PKCS#7 padding<br/>
+        <strong>4.</strong> Server returns HTTP <span class="red">200</span> (valid padding)
+        or <span class="red">403</span> (invalid padding)<br/>
+        <strong>5.</strong> Attacker reads response → one bit of info leaked<br/>
+        <strong>6.</strong> Repeat 256× per byte → full plaintext recovered<br/><br/>
+        The oracle exists because the server <strong>decrypts first</strong>,
+        then checks, then reveals the result.
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="step-card green">
+      <div class="step-title green">AES-GCM — Why There Is No Oracle</div>
+      <div class="step-body">
+        <strong>1.</strong> Attacker sends crafted ciphertext<br/>
+        <strong>2.</strong> Server recomputes GHASH tag<br/>
+        <strong>3.</strong> Tag mismatch → HTTP <span class="green">403</span> immediately<br/>
+        <strong>4.</strong> Server <strong>never decrypts</strong> tampered data<br/>
+        <strong>5.</strong> Attacker reads response → same 403 every time<br/>
+        <strong>6.</strong> 256 guesses × 256 bytes → all 403 → nothing learned<br/><br/>
+        No padding means no padding oracle. The auth tag catches
+        <strong>every tamper attempt</strong> before decryption.
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- CBC vs GCM comparison table -->
+<h2 style="margin-bottom:.7rem">📊 AES-CBC vs AES-GCM Comparison</h2>
+<table class="cmp-table">
+  <tr>
+    <th>Property</th>
+    <th>AES-CBC (Phase 1 — Vulnerable)</th>
+    <th>AES-GCM (Phase 3 — Secure)</th>
+  </tr>
+  <tr>
+    <td>Mode</td>
+    <td class="td-cbc">Cipher Block Chaining</td>
+    <td class="td-gcm">Galois/Counter Mode</td>
+  </tr>
+  <tr>
+    <td>Padding</td>
+    <td class="td-cbc">PKCS#7 — required, exploitable</td>
+    <td class="td-gcm">None — CTR is a stream cipher</td>
+  </tr>
+  <tr>
+    <td>Authentication</td>
+    <td class="td-cbc">None — no integrity check</td>
+    <td class="td-gcm">128-bit GHASH tag — mandatory</td>
+  </tr>
+  <tr>
+    <td>Tampered ciphertext</td>
+    <td class="td-cbc">Decrypted first, then padding checked<br/>
+      <span class="badge badge-red">Leaks padding info</span></td>
+    <td class="td-gcm">Tag check fails, rejected immediately<br/>
+      <span class="badge badge-green">No info leaked</span></td>
+  </tr>
+  <tr>
+    <td>Error response</td>
+    <td class="td-cbc">200 or 403 depending on padding<br/>
+      <span class="badge badge-red">Oracle signal</span></td>
+    <td class="td-gcm">Always 403, always same message<br/>
+      <span class="badge badge-green">No oracle signal</span></td>
+  </tr>
+  <tr>
+    <td>Padding oracle attack</td>
+    <td class="td-cbc">~2048 requests → full plaintext</td>
+    <td class="td-gcm">Impossible — tag blocks all attempts</td>
+  </tr>
+  <tr>
+    <td>IV / Nonce</td>
+    <td class="td-cbc">16-byte IV — must be unpredictable</td>
+    <td class="td-gcm">12-byte nonce — must be unique</td>
+  </tr>
+  <tr>
+    <td>Output</td>
+    <td class="td-cbc">IV + Ciphertext (2 values)</td>
+    <td class="td-gcm">Nonce + Ciphertext + Tag (3 values)</td>
+  </tr>
+</table>
+
+<hr class="divider"/>
+
+<!-- Key lessons -->
+<h2 style="margin-bottom:.7rem">🎓 Key Security Lessons</h2>
+<div class="grid3">
+  <div class="step-card amber">
+    <div class="step-title yellow">Lesson 1 — Always Authenticate</div>
+    <div class="step-body">
+      Encryption without authentication is incomplete security.
+      AES-CBC encrypts but does not authenticate — that gap is exactly
+      what the padding oracle exploits. AES-GCM does both in one pass.
+      <span class="badge badge-green" style="margin-top:.4rem;display:inline-block">
+        Use AES-GCM
+      </span>
+    </div>
+  </div>
+  <div class="step-card amber">
+    <div class="step-title yellow">Lesson 2 — Authenticate Before Decrypt</div>
+    <div class="step-body">
+      Always verify integrity <em>before</em> processing data.
+      GCM checks the tag first — the server never touches tampered ciphertext.
+      This principle eliminates entire classes of attacks beyond just padding oracles.
+      <span class="badge badge-blue" style="margin-top:.4rem;display:inline-block">
+        Auth-then-decrypt
+      </span>
+    </div>
+  </div>
+  <div class="step-card amber">
+    <div class="step-title yellow">Lesson 3 — Same Error Always</div>
+    <div class="step-body">
+      The GCM server returns the identical 403 for every failure —
+      wrong tag, wrong nonce, missing fields. Never differentiate errors
+      in ways the attacker can observe. Constant-time comparison prevents
+      timing oracles too.
+      <span class="badge badge-green" style="margin-top:.4rem;display:inline-block">
+        Generic errors
+      </span>
+    </div>
+  </div>
+</div>

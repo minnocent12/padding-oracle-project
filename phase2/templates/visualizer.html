@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Phase 2 — Attack Visualizer</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;background:#0d1117;color:#c9d1d9;font-size:.88rem}
+h1{font-size:1.2rem;margin-bottom:.1rem}
+h2{color:#58a6ff;font-size:.92rem;font-weight:bold;margin-bottom:.5rem}
+h3{color:#e3b341;font-size:.82rem;font-weight:bold;margin-bottom:.35rem}
+
+/* ── Top header ── */
+.top-header{padding:.9rem 1.4rem .4rem;border-bottom:1px solid #21262d}
+
+/* ── Section menu (top-level: CBC vs GCM) ── */
+.section-bar{display:flex;gap:.6rem;padding:.7rem 1.4rem;
+             background:#0d1117;border-bottom:2px solid #21262d;
+             position:sticky;top:0;z-index:200}
+.section-btn{padding:.5rem 1.3rem;border-radius:6px;cursor:pointer;
+             font-family:monospace;font-size:.84rem;font-weight:bold;
+             border:2px solid transparent;transition:all .2s}
+.section-btn.cbc{color:#f85149;border-color:#f8514960;background:#1a0a0a}
+.section-btn.cbc:hover,.section-btn.cbc.active{background:#3d1a1a;border-color:#f85149}
+.section-btn.gcm{color:#3fb950;border-color:#3fb95060;background:#0a1a0a}
+.section-btn.gcm:hover,.section-btn.gcm.active{background:#122d22;border-color:#3fb950}
+
+/* ── Section containers ── */
+.section-content{display:none}
+.section-content.active{display:block}
+
+/* ── Tab bar (second level, inside each section) ── */
+.tab-bar{display:flex;border-bottom:2px solid #21262d;background:#0d1117;
+         padding:0 1.4rem;position:sticky;top:46px;z-index:100}
+.tab-btn{padding:.65rem 1.2rem;cursor:pointer;font-family:monospace;font-size:.82rem;
+         font-weight:bold;border:none;background:transparent;color:#8b949e;
+         border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab-btn:hover{color:#c9d1d9;background:#161b22}
+.tab-btn.cbc-active{color:#f85149;border-bottom-color:#f85149}
+.tab-btn.gcm-active{color:#3fb950;border-bottom-color:#3fb950}
+.tab-content{display:none;padding:1.2rem 1.4rem}
+.tab-content.active{display:block}
+
+/* ── Alerts ── */
+.warning{background:#3d1a1a;border:1px solid #f85149;padding:.55rem .9rem;
+         border-radius:6px;margin-bottom:1rem;font-size:.8rem;color:#ffa198}
+.safe-banner{background:#122d22;border:1px solid #3fb950;padding:.55rem .9rem;
+             border-radius:6px;margin-bottom:1rem;font-size:.8rem;color:#7ee787}
+.info{background:#111d2e;border:1px solid #58a6ff;padding:.45rem .8rem;
+      border-radius:6px;font-size:.78rem;color:#79c0ff;margin:.4rem 0}
+.success-box{background:#122d22;border:1px solid #3fb950;padding:.55rem .9rem;
+             border-radius:6px;font-size:.82rem;color:#7ee787;margin:.4rem 0}
+.note-box{background:#1e1a2e;border:1px solid #a78bfa;padding:.55rem .9rem;
+          border-radius:6px;font-size:.8rem;color:#c4b5fd;margin:.4rem 0}
+
+/* ── Layout ── */
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:1000px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid3,.grid2{grid-template-columns:1fr}}
+.panel{background:#161b22;border:1px solid #21262d;border-radius:8px;
+       padding:.9rem;margin-bottom:1rem}
+
+/* ── Forms ── */
+input,textarea{width:100%;padding:.4rem .6rem;border-radius:5px;
+       border:1px solid #30363d;background:#0d1117;color:#c9d1d9;
+       font-family:monospace;font-size:.85rem;margin-bottom:.5rem}
+textarea{resize:vertical;min-height:60px}
+button{padding:.42rem 1rem;border-radius:5px;cursor:pointer;font-family:monospace;
+       font-size:.82rem;font-weight:bold;border:none;margin-right:.4rem;margin-bottom:.3rem}
+.btn-green{background:#238636;color:#fff}.btn-green:hover{background:#2ea043}
+.btn-red  {background:#b91c1c;color:#fff}.btn-red:hover{background:#dc2626}
+.btn-blue {background:#1d4ed8;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-amber{background:#92400e;color:#fff}.btn-amber:hover{background:#b45309}
+button:disabled{background:#21262d;color:#6b7280;cursor:not-allowed}
+
+/* ── Stat cards ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.8rem}
+.stat-card{background:#0d1117;border:1px solid #21262d;border-radius:6px;
+           padding:.5rem;text-align:center}
+.stat-val{font-size:1.2rem;font-weight:bold;display:block}
+.stat-lbl{font-size:.68rem;color:#8b949e;display:block;margin-top:.1rem}
+
+/* ── Byte grid ── */
+.block-section{margin-bottom:.8rem}
+.block-label{font-size:.75rem;color:#8b949e;margin-bottom:.3rem;
+             display:flex;align-items:center;gap:.5rem}
+.block-badge{background:#21262d;border:1px solid #30363d;border-radius:4px;
+             padding:.1rem .45rem;font-size:.72rem;color:#8b949e}
+.block-badge.active{border-color:#e3b341;color:#e3b341;background:#2d1f0a}
+.block-badge.done{border-color:#3fb950;color:#3fb950;background:#122d22}
+.byte-grid{display:flex;gap:4px;flex-wrap:wrap;margin:.3rem 0}
+.byte-cell{width:42px;height:52px;border-radius:6px;display:flex;
+           flex-direction:column;align-items:center;justify-content:center;
+           border:1px solid #30363d;transition:all .3s}
+.byte-cell .b-idx{font-size:.58rem;color:#6b7280;margin-bottom:1px}
+.byte-cell .b-char{font-size:1rem;font-weight:bold}
+.byte-cell .b-hex{font-size:.58rem;margin-top:1px}
+.bc-idle  {background:#161b22;border-color:#30363d;color:#6b7280}
+.bc-active{background:#2d1f0a;border-color:#e3b341;color:#e3b341;
+           animation:pulse .6s ease-in-out infinite alternate}
+.bc-done  {background:#122d22;border-color:#3fb950;color:#3fb950}
+.bc-pad   {background:#1e1a2e;border-color:#a78bfa;color:#a78bfa}
+@keyframes pulse{from{box-shadow:0 0 0 0 #e3b34144}to{box-shadow:0 0 0 6px #e3b34100}}
+
+/* ── Oracle feed ── */
+.feed{height:220px;overflow-y:auto;font-size:.75rem;padding:.3rem .1rem}
+.feed-line{padding:2px 4px;border-radius:3px;margin-bottom:1px;display:flex;
+           align-items:center;gap:.4rem;flex-wrap:wrap}
+.feed-200  {background:#122d2240}
+.feed-403  {background:#3d1a1a30}
+.feed-found{background:#1e2a0e;border:1px solid #3fb950;margin:3px 0}
+.feed-tag{font-size:.68rem;padding:1px 5px;border-radius:3px;font-weight:bold;flex-shrink:0}
+.tag-200   {background:#3fb950;color:#000}
+.tag-403   {background:#f85149;color:#fff}
+.tag-found {background:#e3b341;color:#000}
+.tag-verify{background:#a78bfa;color:#000}
+
+/* ── XOR Math ── */
+.math-box{background:#0d1117;border:1px solid #21262d;border-radius:6px;
+          padding:.7rem;font-size:.8rem;min-height:90px}
+.math-row{margin:.25rem 0;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.math-val{padding:2px 8px;border-radius:4px;font-weight:bold;font-size:.82rem}
+.mv-guess{background:#111d2e;border:1px solid #58a6ff;color:#58a6ff}
+.mv-pad  {background:#2d2a10;border:1px solid #e3b341;color:#e3b341}
+.mv-inter{background:#1e1a2e;border:1px solid #a78bfa;color:#a78bfa}
+.mv-iv   {background:#1e2a2e;border:1px solid #22d3ee;color:#22d3ee}
+.mv-plain{background:#122d22;border:1px solid #3fb950;color:#3fb950;font-size:1rem}
+.math-op {color:#8b949e;font-size:.9rem}
+.math-eq {color:#3fb950;font-weight:bold}
+
+/* ── Progress ── */
+.prog-wrap{background:#21262d;border-radius:4px;height:10px;overflow:hidden;margin:.4rem 0}
+.prog-bar {height:100%;background:#58a6ff;border-radius:4px;transition:width .3s;width:0}
+.prog-bar.green{background:#3fb950}
+
+/* ── Bar chart ── */
+.chart{display:flex;align-items:flex-end;gap:2px;height:100px;
+       border-bottom:1px solid #21262d;margin:.4rem 0;padding:0 2px;overflow-x:auto}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:22px}
+.bar-seg{width:100%;border-radius:2px 2px 0 0;transition:height .4s}
+.bar-lbl{font-size:.55rem;color:#6b7280;margin-top:2px;text-align:center}
+
+/* ── Result banner ── */
+.result-banner{border-radius:8px;padding:1rem;text-align:center;
+               font-size:1rem;font-weight:bold;margin-bottom:1rem;display:none}
+.res-success{background:#122d22;border:2px solid #3fb950;color:#3fb950}
+.res-fail   {background:#3d1a1a;border:2px solid #f85149;color:#f85149}
+
+/* ── Ciphertext panel ── */
+.ct-panel-inner{background:#0d1117;border:1px solid #30363d;border-radius:6px;
+                padding:.8rem;margin-bottom:.6rem}
+.ct-label{font-size:.72rem;color:#8b949e;margin-bottom:.2rem}
+.ct-value{word-break:break-all;font-size:.82rem;font-weight:bold;
+          padding:.4rem .6rem;border-radius:4px;letter-spacing:.05em}
+.ct-iv-val  {background:#0a1a2e;border:1px solid #22d3ee;color:#22d3ee}
+.ct-hex-val {background:#0a0e1a;border:1px solid #58a6ff;color:#58a6ff}
+.ct-green   {background:#0a1a0e;border:1px solid #3fb950;color:#3fb950}
+.ct-amber   {background:#1a130a;border:1px solid #e3b341;color:#e3b341}
+
+/* ── GCM probe grid ── */
+.probe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(28px,1fr));
+            gap:3px;margin:.5rem 0}
+.probe-cell{height:22px;border-radius:3px;display:flex;align-items:center;
+            justify-content:center;font-size:.6rem;font-weight:bold}
+.pc-403{background:#3d1a1a;color:#f85149;border:1px solid #f8514940}
+.pc-200{background:#122d22;color:#3fb950;border:1px solid #3fb95040}
+
+/* ── How It Works cards ── */
+.step-card{background:#161b22;border:1px solid #21262d;border-radius:8px;
+           padding:1rem;margin-bottom:.8rem;position:relative;border-left:4px solid #58a6ff}
+.step-card.red   {border-left-color:#f85149}
+.step-card.green {border-left-color:#3fb950}
+.step-card.amber {border-left-color:#e3b341}
+.step-card.purple{border-left-color:#a78bfa}
+.step-num{position:absolute;top:.8rem;right:.8rem;font-size:1.6rem;font-weight:bold;color:#21262d}
+.step-title{font-size:.9rem;font-weight:bold;margin-bottom:.4rem}
+.step-body{font-size:.8rem;color:#8b949e;line-height:1.6}
+.step-body strong{color:#c9d1d9}
+.flow-arrow{text-align:center;color:#30363d;font-size:1.2rem;margin:.2rem 0}
+.code-block{background:#0d1117;border:1px solid #21262d;border-radius:6px;
+            padding:.7rem;font-size:.78rem;color:#8b949e;margin:.5rem 0;
+            white-space:pre-wrap;line-height:1.5}
+.code-block .hl-green {color:#3fb950}
+.code-block .hl-blue  {color:#58a6ff}
+.code-block .hl-amber {color:#e3b341}
+.code-block .hl-red   {color:#f85149}
+.code-block .hl-purple{color:#a78bfa}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+
+/* ── Attacker Tool ── */
+.intercept-panel{background:#161b22;border:2px dashed #f85149;border-radius:8px;
+                 padding:1rem;margin-bottom:1rem}
+.intercept-title{color:#f85149;font-size:.9rem;font-weight:bold;margin-bottom:.6rem}
+.resp-box{background:#0d1117;border:1px solid #21262d;border-radius:6px;
+          padding:.8rem;min-height:80px;font-size:.8rem;white-space:pre-wrap;
+          line-height:1.5;margin-top:.4rem;max-height:300px;overflow-y:auto}
+.resp-200    {border-color:#3fb950;color:#7ee787}
+.resp-403    {border-color:#f85149;color:#ffa198}
+.resp-info   {border-color:#58a6ff;color:#79c0ff}
+.resp-neutral{border-color:#30363d;color:#8b949e}
+
+/* ── Verdict banner ── */
+.verdict{border-radius:8px;padding:1rem;text-align:center;font-size:1rem;
+         font-weight:bold;margin:.6rem 0;display:none}
+.v-safe{background:#122d22;border:2px solid #3fb950;color:#3fb950}
+.v-vuln{background:#3d1a1a;border:2px solid #f85149;color:#f85149}
+
+/* ── Compare table ── */
+.cmp-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.5rem}
+.cmp-table th{background:#161b22;color:#8b949e;padding:.4rem .6rem;
+              text-align:left;border-bottom:1px solid #21262d;font-weight:bold}
+.cmp-table td{padding:.4rem .6rem;border-bottom:1px solid #161b22;vertical-align:top}
+.cmp-table tr:hover td{background:#161b2280}
+.td-cbc{color:#f85149}.td-gcm{color:#3fb950}
+
+/* ── Misc ── */
+.pt-hint{font-size:.75rem;color:#8b949e;margin-bottom:.5rem}
+.pt-hint span{color:#e3b341}
+.dim{color:#8b949e}.green{color:#3fb950}.red{color:#f85149}
+.blue{color:#58a6ff}.yellow{color:#e3b341}.purple{color:#a78bfa}.cyan{color:#22d3ee}
+.bold{font-weight:bold}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid #30363d;
+         border-top-color:#58a6ff;border-radius:50%;
+         animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+label.field-label{color:#8b949e;font-size:.78rem;display:block;margin-bottom:.2rem}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:bold;margin-right:.3rem}
+.badge-red   {background:#3d1a1a;border:1px solid #f85149;color:#ffa198}
+.badge-green {background:#122d22;border:1px solid #3fb950;color:#7ee787}
+.badge-blue  {background:#111d2e;border:1px solid #58a6ff;color:#79c0ff}
+.badge-amber {background:#2d1f0a;border:1px solid #e3b341;color:#fcd34d}
+.badge-purple{background:#1e1a2e;border:1px solid #a78bfa;color:#c4b5fd}
+.divider{border:none;border-top:1px solid #21262d;margin:1rem 0}
+</style>
+</head>
+<body>
+
+<!-- ── Top Header ─────────────────────────────────────────────── -->
+<div class="top-header">
+  <h1 style="color:#c9d1d9">⚡ Phase 2 — Attack Visualizer</h1>
+  <p class="dim" style="font-size:.78rem;margin-top:.2rem">
+    Choose a target server below &nbsp;·&nbsp;
+    <span class="red bold">CBC: vulnerable</span> &nbsp;·&nbsp;
+    <span class="green bold">GCM: secure</span>
+  </p>
+</div>
+
+<!-- ── Section Menu ───────────────────────────────────────────── -->
+<div class="section-bar">
+  <button class="section-btn cbc active" id="sec-cbc"
+          onclick="switchSection('cbc')">
+    ⚔ Attack AES-CBC Server
+  </button>
+  <button class="section-btn gcm" id="sec-gcm"
+          onclick="switchSection('gcm')">
+    🛡 Attack AES-GCM Server
+  </button>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 1 — AES-CBC (existing tabs unchanged)
+════════════════════════════════════════════════════════════ -->
+<div id="section-cbc" class="section-content active">
+  <div class="tab-bar">
+    <button class="tab-btn cbc-active" onclick="switchTab('cbc','attack',this)">⚔ Live Attack</button>
+    <button class="tab-btn"            onclick="switchTab('cbc','howit', this)">📖 How It Works</button>
+    <button class="tab-btn"            onclick="switchTab('cbc','manual',this)">🕵️ Attacker Tool</button>
+  </div>
+  <div id="cbc-tab-attack" class="tab-content active">
+    {% include "tabs/tab_attack.html" %}
+  </div>
+  <div id="cbc-tab-howit" class="tab-content">
+    {% include "tabs/tab_howit.html" %}
+  </div>
+  <div id="cbc-tab-manual" class="tab-content">
+    {% include "tabs/tab_manual.html" %}
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SECTION 2 — AES-GCM (new tabs)
+════════════════════════════════════════════════════════════ -->
+<div id="section-gcm" class="section-content">
+  <div class="tab-bar">
+    <button class="tab-btn gcm-active" onclick="switchTab('gcm','probe', this)">⚔ Oracle Probe</button>
+    <button class="tab-btn"            onclick="switchTab('gcm','result',this)">📊 Results</button>
+    <button class="tab-btn"            onclick="switchTab('gcm','why',   this)">📖 Why It Fails</button>
+  </div>
+  <div id="gcm-tab-probe" class="tab-content active">
+    {% include "tabs/gcm/tab_gcm_attack.html" %}
+  </div>
+  <div id="gcm-tab-result" class="tab-content">
+    {% include "tabs/gcm/tab_gcm_result.html" %}
+  </div>
+  <div id="gcm-tab-why" class="tab-content">
+    {% include "tabs/gcm/tab_gcm_why.html" %}
+  </div>
+</div>
+
+
+<!-- ── Shared JS ──────────────────────────────────────────────── -->
+<script src="{{ url_for('static', filename='js/tab_attack.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tab_manual.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tab_gcm_attack.js') }}"></script>
+<script>
+// ── Section switching ─────────────────────────────────────────
+function switchSection(name) {
+  document.querySelectorAll(".section-content").forEach(s => s.classList.remove("active"));
+  document.getElementById("section-" + name).classList.add("active");
+  document.querySelectorAll(".section-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("sec-" + name).classList.add("active");
+}
+
+// ── Tab switching (scoped per section) ───────────────────────
+function switchTab(section, name, btn) {
+  const prefix = section + "-tab-";
+  document.querySelectorAll(`[id^="${prefix}"]`).forEach(t => t.classList.remove("active"));
+  document.getElementById(prefix + name).classList.add("active");
+  // Only update buttons inside the active section's tab-bar
+  const secEl = document.getElementById("section-" + section);
+  secEl.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("cbc-active","gcm-active"));
+  const activeClass = section === "cbc" ? "cbc-active" : "gcm-active";
+  if (btn) btn.classList.add(activeClass);
+}
+</script>
+
+</body>
+</html>

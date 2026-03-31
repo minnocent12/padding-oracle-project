@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>AES-GCM Defense — Phase 3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;background:#0d1117;color:#c9d1d9;font-size:.88rem}
+h1{color:#3fb950;font-size:1.2rem;margin-bottom:.1rem}
+h2{color:#58a6ff;font-size:.92rem;font-weight:bold;margin-bottom:.5rem}
+h3{color:#e3b341;font-size:.82rem;font-weight:bold;margin-bottom:.35rem}
+
+.top-header{padding:.9rem 1.4rem .4rem;border-bottom:1px solid #21262d}
+.tab-bar{display:flex;border-bottom:2px solid #21262d;background:#0d1117;
+         padding:0 1.4rem;position:sticky;top:0;z-index:100}
+.tab-btn{padding:.65rem 1.2rem;cursor:pointer;font-family:monospace;font-size:.82rem;
+         font-weight:bold;border:none;background:transparent;color:#8b949e;
+         border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab-btn:hover{color:#c9d1d9;background:#161b22}
+.tab-btn.active{color:#3fb950;border-bottom-color:#3fb950}
+.tab-content{display:none;padding:1.2rem 1.4rem}
+.tab-content.active{display:block}
+
+/* Alerts */
+.safe-banner{background:#122d22;border:1px solid #3fb950;padding:.55rem .9rem;
+             border-radius:6px;margin-bottom:1rem;font-size:.8rem;color:#7ee787}
+.warning{background:#3d1a1a;border:1px solid #f85149;padding:.55rem .9rem;
+         border-radius:6px;margin-bottom:1rem;font-size:.8rem;color:#ffa198}
+.info{background:#111d2e;border:1px solid #58a6ff;padding:.45rem .8rem;
+      border-radius:6px;font-size:.78rem;color:#79c0ff;margin:.4rem 0}
+.note-box{background:#1e1a2e;border:1px solid #a78bfa;padding:.55rem .9rem;
+          border-radius:6px;font-size:.8rem;color:#c4b5fd;margin:.4rem 0}
+
+/* Layout */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+.panel{background:#161b22;border:1px solid #21262d;border-radius:8px;
+       padding:.9rem;margin-bottom:1rem}
+
+/* Forms */
+input{width:100%;padding:.4rem .6rem;border-radius:5px;border:1px solid #30363d;
+      background:#0d1117;color:#c9d1d9;font-family:monospace;font-size:.85rem;margin-bottom:.5rem}
+button{padding:.42rem 1rem;border-radius:5px;cursor:pointer;font-family:monospace;
+       font-size:.82rem;font-weight:bold;border:none;margin-right:.4rem;margin-bottom:.3rem}
+.btn-green{background:#238636;color:#fff}.btn-green:hover{background:#2ea043}
+.btn-red  {background:#b91c1c;color:#fff}.btn-red:hover{background:#dc2626}
+.btn-blue {background:#1d4ed8;color:#fff}.btn-blue:hover{background:#2563eb}
+.btn-amber{background:#92400e;color:#fff}.btn-amber:hover{background:#b45309}
+button:disabled{background:#21262d;color:#6b7280;cursor:not-allowed}
+label.field-label{color:#8b949e;font-size:.78rem;display:block;margin-bottom:.2rem}
+
+/* Response boxes */
+.resp-box{background:#0d1117;border:1px solid #21262d;border-radius:6px;
+          padding:.8rem;min-height:70px;font-size:.8rem;white-space:pre-wrap;
+          line-height:1.6;margin-top:.4rem;max-height:320px;overflow-y:auto}
+.resp-ok     {border-color:#3fb950;color:#7ee787}
+.resp-fail   {border-color:#f85149;color:#ffa198}
+.resp-neutral{border-color:#30363d;color:#8b949e}
+.resp-info   {border-color:#58a6ff;color:#79c0ff}
+
+/* Ciphertext display */
+.ct-panel-inner{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:.8rem;margin-bottom:.6rem}
+.ct-label{font-size:.72rem;color:#8b949e;margin-bottom:.2rem}
+.ct-value{word-break:break-all;font-size:.82rem;font-weight:bold;padding:.4rem .6rem;border-radius:4px;letter-spacing:.05em}
+.ct-green{background:#0a1a0e;border:1px solid #3fb950;color:#3fb950}
+.ct-blue {background:#0a0e1a;border:1px solid #58a6ff;color:#58a6ff}
+.ct-amber{background:#1a130a;border:1px solid #e3b341;color:#e3b341}
+
+/* Step cards */
+.step-card{background:#161b22;border:1px solid #21262d;border-radius:8px;
+           padding:1rem;margin-bottom:.8rem;position:relative;border-left:4px solid #58a6ff}
+.step-card.green {border-left-color:#3fb950}
+.step-card.red   {border-left-color:#f85149}
+.step-card.amber {border-left-color:#e3b341}
+.step-card.purple{border-left-color:#a78bfa}
+.step-num{position:absolute;top:.8rem;right:.8rem;font-size:1.6rem;font-weight:bold;color:#21262d}
+.step-title{font-size:.9rem;font-weight:bold;margin-bottom:.4rem}
+.step-body{font-size:.8rem;color:#8b949e;line-height:1.6}
+.step-body strong{color:#c9d1d9}
+.code-block{background:#0d1117;border:1px solid #21262d;border-radius:6px;
+            padding:.7rem;font-size:.78rem;color:#8b949e;margin:.5rem 0;
+            white-space:pre-wrap;line-height:1.5}
+.hl-green{color:#3fb950}.hl-blue{color:#58a6ff}.hl-amber{color:#e3b341}
+.hl-red{color:#f85149}.hl-purple{color:#a78bfa}
+.flow-arrow{text-align:center;color:#30363d;font-size:1.2rem;margin:.2rem 0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
+.divider{border:none;border-top:1px solid #21262d;margin:1rem 0}
+
+/* Progress */
+.prog-wrap{background:#21262d;border-radius:4px;height:10px;overflow:hidden;margin:.4rem 0}
+.prog-bar {height:100%;background:#3fb950;border-radius:4px;transition:width .3s;width:0}
+
+/* Oracle probe results */
+.probe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(28px,1fr));
+            gap:3px;margin:.5rem 0}
+.probe-cell{height:22px;border-radius:3px;display:flex;align-items:center;
+            justify-content:center;font-size:.6rem;font-weight:bold}
+.pc-403{background:#3d1a1a;color:#f85149;border:1px solid #f8514940}
+.pc-200{background:#122d22;color:#3fb950;border:1px solid #3fb95040}
+.pc-err{background:#21262d;color:#6b7280;border:1px solid #30363d}
+
+/* Stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.8rem}
+.stat-card{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:.5rem;text-align:center}
+.stat-val{font-size:1.2rem;font-weight:bold;display:block}
+.stat-lbl{font-size:.68rem;color:#8b949e;display:block;margin-top:.1rem}
+
+/* Verdict banner */
+.verdict{border-radius:8px;padding:1rem;text-align:center;font-size:1rem;
+         font-weight:bold;margin:.6rem 0;display:none}
+.v-safe{background:#122d22;border:2px solid #3fb950;color:#3fb950}
+.v-vuln{background:#3d1a1a;border:2px solid #f85149;color:#f85149}
+
+/* Compare table */
+.cmp-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.5rem}
+.cmp-table th{background:#161b22;color:#8b949e;padding:.4rem .6rem;
+              text-align:left;border-bottom:1px solid #21262d;font-weight:bold}
+.cmp-table td{padding:.4rem .6rem;border-bottom:1px solid #161b22;vertical-align:top}
+.cmp-table tr:hover td{background:#161b2280}
+.td-cbc{color:#f85149}.td-gcm{color:#3fb950}
+
+/* Misc */
+.dim{color:#8b949e}.green{color:#3fb950}.red{color:#f85149}
+.blue{color:#58a6ff}.yellow{color:#e3b341}.purple{color:#a78bfa}.cyan{color:#22d3ee}
+.bold{font-weight:bold}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:bold;margin-right:.3rem}
+.badge-green{background:#122d22;border:1px solid #3fb950;color:#7ee787}
+.badge-red  {background:#3d1a1a;border:1px solid #f85149;color:#ffa198}
+.badge-blue {background:#111d2e;border:1px solid #58a6ff;color:#79c0ff}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid #30363d;
+         border-top-color:#3fb950;border-radius:50%;
+         animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="top-header">
+  <h1>🛡️ AES-GCM Defense — Phase 3</h1>
+  <p class="dim" style="font-size:.78rem;margin-top:.2rem">
+    The fixed server on port 5001 &nbsp;·&nbsp;
+    Authenticated encryption &nbsp;·&nbsp;
+    <span class="green bold">Padding oracle impossible</span>
+  </p>
+</div>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('demo',   this)">🔒 GCM Demo</button>
+  <button class="tab-btn"        onclick="switchTab('attack', this)">⚔ Attack Attempt</button>
+  <button class="tab-btn"        onclick="switchTab('why',    this)">📖 Why GCM Is Safe</button>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     TAB 1 — GCM DEMO
+═══════════════════════════════════════════════════════════════ -->
+<div id="tab-demo" class="tab-content active">
+
+  <div class="safe-banner">
+    ✔ You are now talking to the <strong>secure AES-GCM server</strong> on port 5001.
+    Every message is encrypted with a fresh random nonce and a 128-bit authentication tag.
+    Tampering is detected before decryption begins.
+  </div>
+
+  <!-- Encrypt -->
+  <div class="panel">
+    <h2>🔒 Step 1 — Encrypt a Message with AES-GCM</h2>
+    <div class="grid2">
+      <div>
+        <label class="field-label">Plaintext to encrypt:</label>
+        <input id="gcm-pt" value="Hello from GCM!" placeholder="Enter any message"/>
+        <button class="btn-green" onclick="gcmEncrypt()">🔒 Encrypt via GCM Server</button>
+      </div>
+      <div>
+        <div class="info" style="font-size:.76rem">
+          Unlike CBC, GCM produces <strong>three</strong> values:<br/>
+          <span class="green">Nonce</span> — random 96-bit value, unique per message<br/>
+          <span class="blue">Ciphertext</span> — the encrypted data<br/>
+          <span class="yellow">Auth Tag</span> — 128-bit integrity proof
+        </div>
+      </div>
+    </div>
+
+    <div id="gcm-enc-result" style="display:none;margin-top:.8rem">
+      <div class="grid3">
+        <div class="ct-panel-inner">
+          <div class="ct-label">🟢 Nonce (96-bit, random per message):</div>
+          <div class="ct-value ct-green" id="gcm-nonce">—</div>
+        </div>
+        <div class="ct-panel-inner">
+          <div class="ct-label">🔵 Ciphertext:</div>
+          <div class="ct-value ct-blue" id="gcm-ct">—</div>
+        </div>
+        <div class="ct-panel-inner">
+          <div class="ct-label">🟡 Authentication Tag (128-bit):</div>
+          <div class="ct-value ct-amber" id="gcm-tag">—</div>
+        </div>
+      </div>
+      <div class="note-box" style="margin-top:.4rem">
+        💡 Unlike CBC's IV + Ciphertext (2 values), GCM produces
+        <strong>Nonce + Ciphertext + Tag</strong> (3 values).
+        The tag is what makes tampering detectable.
+      </div>
+    </div>
+  </div>
+
+  <!-- Decrypt -->
+  <div class="panel">
+    <h2>🔓 Step 2 — Decrypt (Auth Tag Verified First)</h2>
+    <div class="info" style="margin-bottom:.7rem">
+      Paste the three values from Step 1, or modify any field to simulate tampering.
+      The server verifies the auth tag <strong>before</strong> decrypting.
+    </div>
+    <div class="grid3">
+      <div>
+        <label class="field-label">Nonce (hex):</label>
+        <input id="dec-nonce" placeholder="Paste nonce from above"/>
+      </div>
+      <div>
+        <label class="field-label">Ciphertext (hex):</label>
+        <input id="dec-ct" placeholder="Paste ciphertext from above"/>
+      </div>
+      <div>
+        <label class="field-label">Auth Tag (hex):</label>
+        <input id="dec-tag" placeholder="Paste tag from above"/>
+      </div>
+    </div>
+    <button class="btn-green" onclick="gcmDecrypt()">🔓 Decrypt (verify tag first)</button>
+    <button class="btn-red"   onclick="tamperAndDecrypt()">⚡ Tamper Ciphertext Then Decrypt</button>
+
+    <div style="margin-top:.7rem">
+      <label class="field-label">Server Response:</label>
+      <div class="resp-box resp-neutral" id="gcm-dec-resp">
+        Paste the three values above and click Decrypt.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-demo -->
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     TAB 2 — ATTACK ATTEMPT
+═══════════════════════════════════════════════════════════════ -->
+<div id="tab-attack" class="tab-content">
+
+  <div class="warning">
+    ⚠ This tab simulates running the padding oracle attack against the GCM server.
+    It sends 256 tampered requests — the same probing the Phase 2 attack does per byte.
+    Watch what happens.
+  </div>
+
+  <!-- Setup -->
+  <div class="panel">
+    <h2>🎯 Setup — Get a Real GCM Ciphertext to Attack</h2>
+    <div class="info" style="margin-bottom:.6rem">
+      First encrypt something to get a real ciphertext, then run the oracle probe against it.
+    </div>
+    <label class="field-label">Plaintext to encrypt:</label>
+    <input id="atk-pt" value="Attack me if you can" placeholder="Enter plaintext"/>
+    <button class="btn-green" onclick="atkEncrypt()">🔒 Encrypt via GCM Server</button>
+
+    <div id="atk-enc-result" style="display:none;margin-top:.7rem">
+      <div class="grid3">
+        <div class="ct-panel-inner">
+          <div class="ct-label">Nonce:</div>
+          <div class="ct-value ct-green" id="atk-nonce">—</div>
+        </div>
+        <div class="ct-panel-inner">
+          <div class="ct-label">Ciphertext:</div>
+          <div class="ct-value ct-blue" id="atk-ct">—</div>
+        </div>
+        <div class="ct-panel-inner">
+          <div class="ct-label">Auth Tag:</div>
+          <div class="ct-value ct-amber" id="atk-tag">—</div>
+        </div>
+      </div>
+      <button class="btn-red" id="btn-probe" onclick="runProbe()" style="margin-top:.6rem">
+        ⚔ Run Oracle Probe (256 tampered requests)
+      </button>
+    </div>
+  </div>
+
+  <!-- Probe results -->
+  <div class="panel" id="probe-panel" style="display:none">
+    <h2>📡 Oracle Probe Results — 256 Requests</h2>
+    <div class="info" style="margin-bottom:.6rem">
+      Each cell = one tampered request. In a vulnerable server (CBC), different response
+      codes reveal padding info. Watch what GCM returns.
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-val green" id="p-total">0</span>
+        <span class="stat-lbl">Requests Sent</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="p-unique">—</span>
+        <span class="stat-lbl">Unique Response Codes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val" id="p-elapsed">—</span>
+        <span class="stat-lbl">Time Elapsed</span>
+      </div>
+    </div>
+
+    <div class="prog-wrap"><div class="prog-bar" id="probe-bar"></div></div>
+    <div class="dim" style="font-size:.75rem;text-align:center;margin-bottom:.5rem"
+         id="probe-status">Running probe...</div>
+
+    <div class="probe-grid" id="probe-grid"></div>
+
+    <div class="verdict" id="probe-verdict"></div>
+
+    <div id="probe-explanation" style="display:none;margin-top:.8rem">
+      <div class="step-card green">
+        <div class="step-title green">🛡️ Why the Attack Failed</div>
+        <div class="step-body">
+          Every single one of those 256 requests returned <strong>HTTP 403</strong> —
+          the exact same response, with the exact same message.<br/><br/>
+          In Phase 2, the CBC server returned <strong>HTTP 200</strong> for the one
+          guess that produced valid padding, giving the attacker a signal to exploit.
+          Here, GCM returns <strong>403 for all 256 guesses</strong> — no signal,
+          no information, no oracle.<br/><br/>
+          The auth tag verification happens <strong>before decryption</strong>.
+          The server never even attempts to decrypt tampered ciphertext.
+          There is nothing for the attacker to learn.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CBC vs GCM comparison -->
+  <div class="panel">
+    <h2>📊 CBC vs GCM — Oracle Signal Comparison</h2>
+    <table class="cmp-table">
+      <tr>
+        <th>Scenario</th>
+        <th>AES-CBC (Phase 2)</th>
+        <th>AES-GCM (Phase 3)</th>
+      </tr>
+      <tr>
+        <td>Valid request</td>
+        <td class="td-cbc">HTTP 200 — plaintext returned</td>
+        <td class="td-gcm">HTTP 200 — plaintext returned</td>
+      </tr>
+      <tr>
+        <td>Tampered ciphertext</td>
+        <td class="td-cbc">HTTP 200 <em>or</em> 403 depending on padding<br/>
+          <span class="badge badge-red">Oracle signal leaked</span></td>
+        <td class="td-gcm">HTTP 403 — always, no exception<br/>
+          <span class="badge badge-green">No oracle signal</span></td>
+      </tr>
+      <tr>
+        <td>Wrong padding byte</td>
+        <td class="td-cbc">HTTP 403 — reveals padding info</td>
+        <td class="td-gcm">HTTP 403 — same as everything else</td>
+      </tr>
+      <tr>
+        <td>Correct padding guess</td>
+        <td class="td-cbc">HTTP 200 — attacker knows the guess was right</td>
+        <td class="td-gcm">HTTP 403 — tag still invalid, rejected</td>
+      </tr>
+      <tr>
+        <td>256 guesses per byte</td>
+        <td class="td-cbc">~1 HTTP 200 found → byte recovered</td>
+        <td class="td-gcm">256 × HTTP 403 → nothing learned</td>
+      </tr>
+      <tr>
+        <td>Full plaintext recovery</td>
+        <td class="td-cbc">~2048 requests → full plaintext exposed</td>
+        <td class="td-gcm">Impossible — auth tag blocks every attempt</td>
+      </tr>
+    </table>
+  </div>
+
+</div><!-- /tab-attack -->
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     TAB 3 — WHY GCM IS SAFE
+═══════════════════════════════════════════════════════════════ -->
+<div id="tab-why" class="tab-content">
+
+  <div class="info" style="margin-bottom:1rem">
+    This tab explains exactly why AES-GCM eliminates the padding oracle vulnerability
+    and why it is the correct replacement for AES-CBC.
+  </div>
+
+  <!-- The core difference -->
+  <div class="step-card green">
+    <div class="step-num">💡</div>
+    <div class="step-title green">🔑 The Core Difference: Authenticated Encryption</div>
+    <div class="step-body">
+      AES-CBC is <strong>encryption only</strong> — it scrambles data but provides
+      no guarantee that the ciphertext hasn't been modified.<br/><br/>
+      AES-GCM is <strong>authenticated encryption</strong> — it both encrypts the data
+      and produces a <strong>128-bit authentication tag</strong> that acts as a
+      cryptographic proof of integrity. If even one bit of the ciphertext, nonce,
+      or associated data changes, the tag verification fails and decryption is
+      <strong>never attempted</strong>.
+    </div>
+  </div>
+
+  <div class="flow-arrow">▼</div>
+
+  <!-- How GCM works -->
+  <h2 style="margin-bottom:.6rem">🔄 How AES-GCM Works</h2>
+
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <div class="step-title blue">Encryption</div>
+    <div class="step-body">
+      AES-GCM uses a random 96-bit nonce (never reused) and encrypts in CTR mode.
+      Simultaneously it computes a GHASH over the ciphertext to produce the auth tag.
+      <div class="code-block"><span class="hl-amber">Plaintext</span>  →  <span class="hl-blue">[AES-CTR encrypt]</span>  →  <span class="hl-blue">Ciphertext</span>
+                   ↓
+            <span class="hl-blue">[GHASH over ciphertext]</span>
+                   ↓
+<span class="hl-green">Output:  Nonce  +  Ciphertext  +  Auth Tag (128-bit)</span></div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">▼</div>
+
+  <div class="step-card green">
+    <div class="step-num">2</div>
+    <div class="step-title green">Decryption — Tag Verified FIRST</div>
+    <div class="step-body">
+      Before any decryption happens, the server recomputes the GHASH over the received
+      ciphertext and compares it to the received tag. Only if they match does decryption proceed.
+      <div class="code-block"><span class="hl-blue">Received:  Nonce  +  Ciphertext  +  Tag</span>
+
+Step 1:  Recompute GHASH over received ciphertext
+Step 2:  Compare computed tag vs received tag
+         <span class="hl-red">Mismatch?</span>  →  Reject immediately, return generic 403
+         <span class="hl-green">Match?</span>     →  Decrypt and return plaintext
+
+<span class="hl-green">Key point: decryption never runs on tampered data</span></div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">▼</div>
+
+  <div class="step-card red">
+    <div class="step-num">3</div>
+    <div class="step-title red">Why the Padding Oracle Cannot Work</div>
+    <div class="step-body">
+      The padding oracle attack works by crafting modified ciphertext and observing
+      whether the server responds differently for valid vs invalid padding.
+      In GCM this is impossible because:
+      <div class="code-block"><span class="hl-red">Attacker crafts tampered ciphertext</span>
+         ↓
+<span class="hl-amber">Server recomputes GHASH → tag mismatch</span>
+         ↓
+<span class="hl-green">Server returns HTTP 403 — generic error, no padding info</span>
+         ↓
+<span class="hl-red">Attacker sends next guess → same result: HTTP 403</span>
+         ↓
+<span class="hl-red">All 256 guesses → all HTTP 403 → no signal → no oracle</span>
+
+There is no padding in GCM. There is no padding error to leak.
+The tag check eliminates all information before it can escape.</div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- CBC vs GCM architecture -->
+  <h2 style="margin-bottom:.7rem">🏗️ CBC vs GCM Architecture</h2>
+  <div class="two-col">
+    <div>
+      <div class="step-card red">
+        <div class="step-title red">AES-CBC (Vulnerable)</div>
+        <div class="step-body">
+          <strong>Mode:</strong> Cipher Block Chaining<br/>
+          <strong>Padding:</strong> PKCS#7 (required, exploitable)<br/>
+          <strong>Auth:</strong> None — no integrity check<br/>
+          <strong>Error:</strong> Different for padding valid vs invalid<br/>
+          <strong>Oracle:</strong> Yes — server leaks padding info<br/><br/>
+          CBC encrypts blocks sequentially, XORing each block with
+          the previous ciphertext block. This XOR dependency is exactly
+          what the attacker exploits to recover plaintext byte by byte.
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="step-card green">
+        <div class="step-title green">AES-GCM (Secure)</div>
+        <div class="step-body">
+          <strong>Mode:</strong> Galois/Counter Mode<br/>
+          <strong>Padding:</strong> None — stream cipher mode<br/>
+          <strong>Auth:</strong> 128-bit GHASH tag (mandatory)<br/>
+          <strong>Error:</strong> Always the same generic 403<br/>
+          <strong>Oracle:</strong> Impossible — tag blocks all probing<br/><br/>
+          GCM uses CTR mode (no padding needed) and a GHASH function
+          that binds the ciphertext to the key. Any modification
+          invalidates the tag. The server never decrypts tampered data.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- Lessons -->
+  <h2 style="margin-bottom:.7rem">🎓 Key Lessons from Phase 3</h2>
+  <div class="grid3">
+    <div class="step-card amber">
+      <div class="step-title yellow">Lesson 1 — Encrypt-then-Authenticate</div>
+      <div class="step-body">
+        Never use encryption without authentication. AES-CBC encrypts but
+        does not authenticate — this is the root cause of the vulnerability.
+        AES-GCM does both in a single pass.
+        <span class="badge badge-green" style="margin-top:.4rem;display:inline-block">Use AES-GCM</span>
+      </div>
+    </div>
+    <div class="step-card amber">
+      <div class="step-title yellow">Lesson 2 — Generic Errors Always</div>
+      <div class="step-body">
+        Even if you use CBC, returning the same error for every failure prevents
+        the oracle. The GCM server always returns the identical 403 response —
+        no timing difference, no message difference, no oracle.
+        <span class="badge badge-blue" style="margin-top:.4rem;display:inline-block">Constant-time</span>
+      </div>
+    </div>
+    <div class="step-card amber">
+      <div class="step-title yellow">Lesson 3 — Never Decrypt Untrusted Data</div>
+      <div class="step-body">
+        The GCM server verifies the auth tag <em>before</em> decryption.
+        This principle — authenticate before processing — is fundamental
+        to secure system design and eliminates entire classes of attacks.
+        <span class="badge badge-green" style="margin-top:.4rem;display:inline-block">Auth first</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-why -->
+
+
+<script>
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  btn.classList.add("active");
+}
+
+// ── TAB 1: GCM Demo ───────────────────────────────────────────
+
+async function gcmEncrypt() {
+  const pt = document.getElementById("gcm-pt").value.trim();
+  if (!pt) { alert("Enter a plaintext."); return; }
+  try {
+    const r = await fetch("/proxy/gcm/encrypt", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({plaintext: pt})
+    });
+    const d = await r.json();
+    if (!r.ok) { alert("Encryption failed: " + (d.error||"")); return; }
+    document.getElementById("gcm-nonce").textContent = d.nonce;
+    document.getElementById("gcm-ct").textContent    = d.ciphertext;
+    document.getElementById("gcm-tag").textContent   = d.tag;
+    document.getElementById("gcm-enc-result").style.display = "block";
+    // Auto-fill decrypt fields
+    document.getElementById("dec-nonce").value = d.nonce;
+    document.getElementById("dec-ct").value    = d.ciphertext;
+    document.getElementById("dec-tag").value   = d.tag;
+  } catch(e) { alert("Cannot reach GCM server: " + e.message); }
+}
+
+async function gcmDecrypt() {
+  const nonce = document.getElementById("dec-nonce").value.trim();
+  const ct    = document.getElementById("dec-ct").value.trim();
+  const tag   = document.getElementById("dec-tag").value.trim();
+  const box   = document.getElementById("gcm-dec-resp");
+  if (!nonce||!ct||!tag) {
+    box.className="resp-box resp-info";
+    box.textContent="⚠ Fill in all three fields (Nonce, Ciphertext, Tag)."; return;
+  }
+  box.className="resp-box resp-neutral"; box.textContent="⏳ Verifying auth tag...";
+  try {
+    const r = await fetch("/proxy/gcm/decrypt", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({nonce, ciphertext:ct, tag})
+    });
+    const d = await r.json();
+    if (r.status === 200) {
+      box.className = "resp-box resp-ok";
+      box.textContent =
+        `✔ HTTP 200 — Auth tag verified. Decryption successful.\n\n` +
+        `Plaintext: "${d.plaintext}"\n\n` +
+        `The auth tag matched — the ciphertext was not tampered with.`;
+    } else {
+      box.className = "resp-box resp-fail";
+      box.textContent =
+        `✘ HTTP 403 — Authentication failed.\n\n` +
+        `Error  : ${d.error}\n` +
+        `Reason : ${d.reason}\n` +
+        `Info   : ${d.info||""}\n\n` +
+        `The auth tag did not match. The server rejected the request\n` +
+        `before decryption even began. No plaintext was revealed.`;
+    }
+  } catch(e) {
+    box.className="resp-box resp-fail";
+    box.textContent=`❌ ${e.message}`;
+  }
+}
+
+async function tamperAndDecrypt() {
+  const nonce = document.getElementById("dec-nonce").value.trim();
+  const ct    = document.getElementById("dec-ct").value.trim();
+  const tag   = document.getElementById("dec-tag").value.trim();
+  const box   = document.getElementById("gcm-dec-resp");
+  if (!ct) { box.className="resp-box resp-info";
+             box.textContent="⚠ Encrypt something first, then click this button."; return; }
+
+  // Flip the last byte of ciphertext
+  const tampered = ct.slice(0, -2) +
+    (255 - parseInt(ct.slice(-2), 16)).toString(16).padStart(2,"0");
+
+  box.className="resp-box resp-neutral";
+  box.textContent=`⏳ Sending tampered ciphertext...\n\nOriginal : ${ct}\nTampered : ${tampered}`;
+
+  try {
+    const r = await fetch("/proxy/gcm/decrypt", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({nonce, ciphertext: tampered, tag})
+    });
+    const d = await r.json();
+    box.className = "resp-box resp-fail";
+    box.textContent =
+      `✘ HTTP 403 — Tamper detected immediately.\n\n` +
+      `Original ciphertext : ${ct}\n` +
+      `Tampered ciphertext : ${tampered}\n` +
+      `Change              : last byte flipped\n\n` +
+      `Error  : ${d.error}\n` +
+      `Reason : ${d.reason}\n` +
+      `Oracle : ${d.oracle}\n\n` +
+      `The auth tag caught the modification before decryption.\n` +
+      `A padding oracle attack against this server returns the same\n` +
+      `403 for every one of its 256 guesses — zero information leaked.`;
+  } catch(e) {
+    box.className="resp-box resp-fail"; box.textContent=`❌ ${e.message}`;
+  }
+}
+
+// ── TAB 2: Attack Attempt ─────────────────────────────────────
+
+async function atkEncrypt() {
+  const pt = document.getElementById("atk-pt").value.trim();
+  if (!pt) { alert("Enter a plaintext."); return; }
+  try {
+    const r = await fetch("/proxy/gcm/encrypt", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({plaintext: pt})
+    });
+    const d = await r.json();
+    if (!r.ok) { alert("Encryption failed."); return; }
+    document.getElementById("atk-nonce").textContent = d.nonce;
+    document.getElementById("atk-ct").textContent    = d.ciphertext;
+    document.getElementById("atk-tag").textContent   = d.tag;
+    document.getElementById("atk-enc-result").style.display = "block";
+  } catch(e) { alert("Cannot reach GCM server: " + e.message); }
+}
+
+async function runProbe() {
+  const ct  = document.getElementById("atk-ct").textContent.trim();
+  const tag = document.getElementById("atk-tag").textContent.trim();
+  if (!ct || ct === "—") { alert("Encrypt something first."); return; }
+
+  document.getElementById("probe-panel").style.display   = "block";
+  document.getElementById("probe-verdict").style.display = "none";
+  document.getElementById("probe-explanation").style.display = "none";
+  document.getElementById("btn-probe").disabled = true;
+  document.getElementById("probe-grid").innerHTML = "";
+
+  const bar    = document.getElementById("probe-bar");
+  const status = document.getElementById("probe-status");
+  const grid   = document.getElementById("probe-grid");
+  bar.style.width = "0";
+  status.textContent = "Sending 256 tampered requests to GCM server...";
+
+  // Animate grid building while waiting for server response
+  const animInterval = setInterval(() => {
+    const pct = (grid.children.length / 256 * 100);
+    bar.style.width = pct + "%";
+  }, 50);
+
+  try {
+    const r = await fetch("/probe/gcm", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ciphertext: ct, tag})
+    });
+    const d = await r.json();
+    clearInterval(animInterval);
+    bar.style.width = "100%";
+
+    // Build result grid — all 403
+    grid.innerHTML = "";
+    for (let i = 0; i < d.total_requests; i++) {
+      const cell = document.createElement("div");
+      cell.className = "probe-cell pc-403";
+      cell.textContent = "403";
+      cell.title = `Request ${i}: HTTP 403`;
+      grid.appendChild(cell);
+    }
+
+    document.getElementById("p-total").textContent   = d.total_requests;
+    const uniqEl = document.getElementById("p-unique");
+    uniqEl.textContent  = d.unique_codes;
+    uniqEl.style.color  = d.unique_codes === 1 ? "#3fb950" : "#f85149";
+    document.getElementById("p-elapsed").textContent = d.elapsed + "s";
+    status.textContent  = `Complete — ${d.total_requests} requests sent`;
+
+    const verdict = document.getElementById("probe-verdict");
+    verdict.style.display = "block";
+    verdict.className = d.oracle_signal ? "verdict v-vuln" : "verdict v-safe";
+    verdict.innerHTML = d.oracle_signal
+      ? `✘ ORACLE SIGNAL DETECTED — server is vulnerable`
+      : `✔ NO ORACLE SIGNAL — all ${d.total_requests} responses identical (HTTP 403) · Attack impossible`;
+
+    document.getElementById("probe-explanation").style.display = "block";
+  } catch(e) {
+    clearInterval(animInterval);
+    status.textContent = "Error: " + e.message;
+  }
+  document.getElementById("btn-probe").disabled = false;
+}
+</script>
+</body>
+</html>

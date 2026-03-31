@@ -1,0 +1,128 @@
+<!-- TAB — WHY THE ATTACK FAILS AGAINST GCM
+     Static educational content — no JS required -->
+
+<div class="info" style="margin-bottom:1rem">
+  This tab explains exactly why the padding oracle attack that works perfectly against
+  AES-CBC produces zero results against AES-GCM.
+</div>
+
+<!-- Core reason -->
+<div class="step-card green">
+  <div class="step-num">💡</div>
+  <div class="step-title green">🧠 The One-Sentence Answer</div>
+  <div class="step-body">
+    AES-GCM has no padding — and every tampered ciphertext is rejected by the
+    <strong>authentication tag</strong> before decryption even starts,
+    so the server never produces a different response for different inputs.
+    The oracle is silent.
+  </div>
+</div>
+
+<h2 style="margin-bottom:.6rem">🔄 What Happens Step by Step</h2>
+
+<div class="step-card red">
+  <div class="step-num">1</div>
+  <div class="step-title red">Against CBC — The Attack Works</div>
+  <div class="step-body">
+    <div class="code-block"><span class="hl-amber">Attacker crafts</span> ciphertext with guess byte at position [15]
+           ↓
+<span class="hl-blue">CBC server decrypts</span> using secret key  ← decryption happens first
+           ↓
+<span class="hl-blue">Server checks PKCS#7 padding</span>
+           ↓
+  Padding valid   → <span class="hl-green">HTTP 200</span>  ← oracle signal!
+  Padding invalid → <span class="hl-red">HTTP 403</span>
+
+<span class="hl-green">Attacker reads the difference → byte recovered → repeat × 16 → full plaintext</span></div>
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card green">
+  <div class="step-num">2</div>
+  <div class="step-title green">Against GCM — The Attack Fails</div>
+  <div class="step-body">
+    <div class="code-block"><span class="hl-amber">Attacker crafts</span> ciphertext with tampered bytes
+           ↓
+<span class="hl-blue">GCM server recomputes GHASH tag</span> over received ciphertext
+           ↓
+<span class="hl-red">Tag mismatch → HTTP 403 immediately</span>  ← decryption never runs
+           ↓
+<span class="hl-red">All 256 guesses → all HTTP 403</span>
+
+<span class="hl-green">Attacker sees identical responses → nothing learned → attack fails</span></div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- Side-by-side comparison -->
+<h2 style="margin-bottom:.7rem">📊 CBC vs GCM — Why the Oracle Works / Doesn't</h2>
+<table class="cmp-table">
+  <tr>
+    <th>Property</th>
+    <th>AES-CBC — Vulnerable</th>
+    <th>AES-GCM — Secure</th>
+  </tr>
+  <tr>
+    <td>Padding</td>
+    <td class="td-cbc">PKCS#7 — required, server checks it</td>
+    <td class="td-gcm">None — CTR mode, no padding exists</td>
+  </tr>
+  <tr>
+    <td>Authentication</td>
+    <td class="td-cbc">None — no integrity verification</td>
+    <td class="td-gcm">128-bit GHASH tag — verified first</td>
+  </tr>
+  <tr>
+    <td>Order of operations</td>
+    <td class="td-cbc">Decrypt → check padding → respond</td>
+    <td class="td-gcm">Verify tag → reject OR decrypt → respond</td>
+  </tr>
+  <tr>
+    <td>Tampered ciphertext response</td>
+    <td class="td-cbc">HTTP 200 or 403 — depends on padding<br/>
+      <span class="badge badge-red">Oracle signal</span></td>
+    <td class="td-gcm">HTTP 403 — always, no exception<br/>
+      <span class="badge badge-green">No signal</span></td>
+  </tr>
+  <tr>
+    <td>256 oracle queries per byte</td>
+    <td class="td-cbc">~1 HTTP 200 found → byte recovered</td>
+    <td class="td-gcm">256 × HTTP 403 → nothing learned</td>
+  </tr>
+  <tr>
+    <td>Full plaintext (16 bytes)</td>
+    <td class="td-cbc">~2048 requests → complete recovery</td>
+    <td class="td-gcm">Impossible — tag blocks all attempts</td>
+  </tr>
+</table>
+
+<hr class="divider"/>
+
+<!-- Key takeaway -->
+<div class="two-col" style="margin-top:1rem">
+  <div class="step-card red">
+    <div class="step-title red">Why CBC Is Vulnerable</div>
+    <div class="step-body">
+      CBC was designed only to encrypt — not to authenticate. It has no way to detect
+      tampering. When an attacker sends crafted ciphertext, the server decrypts it
+      faithfully and reveals padding information through its response.
+      That information leak is the oracle.<br/><br/>
+      The vulnerability is not in AES itself — it is in the
+      <strong>combination of CBC mode + padding checks + different error responses</strong>.
+    </div>
+  </div>
+  <div class="step-card green">
+    <div class="step-title green">Why GCM Is Safe</div>
+    <div class="step-body">
+      GCM uses authenticated encryption — it produces a 128-bit tag that is a
+      cryptographic proof that the ciphertext is unmodified. Any tampered input
+      produces a tag mismatch, and the server rejects it with the same generic
+      error every time.<br/><br/>
+      There is <strong>no padding to exploit</strong>, and <strong>no difference
+      in responses</strong> to observe. The oracle cannot exist.
+    </div>
+  </div>
+</div>

@@ -1,0 +1,206 @@
+<!-- TAB 2 — HOW IT WORKS
+     No JS required — static educational content only. -->
+
+<div class="info" style="margin-bottom:1rem">
+  This tab explains the Padding Oracle Attack from start to finish — what it needs,
+  how it works, and why it's dangerous. No prior cryptography knowledge required.
+</div>
+
+<!-- ── What Is It ─────────────────────────────────────────────── -->
+<div class="step-card">
+  <div class="step-num">?</div>
+  <div class="step-title blue">🧠 What Is a Padding Oracle Attack?</div>
+  <div class="step-body">
+    A <strong>Padding Oracle Attack</strong> is a chosen-ciphertext attack that lets an attacker
+    decrypt any AES-CBC ciphertext <strong>without knowing the secret key</strong>.<br/><br/>
+    The word <strong>"oracle"</strong> means an information source — in this case, the vulnerable
+    server itself. Every time the server says <em>"valid padding"</em> or
+    <em>"invalid padding"</em> in response to a crafted request, it leaks one bit of
+    information about the plaintext. Repeat this up to 256 times per byte, and the full
+    plaintext is revealed.<br/><br/>
+    <strong>Important:</strong> AES itself is not broken. The vulnerability is in
+    <strong>CBC mode + leaky error handling</strong>.
+  </div>
+</div>
+
+<!-- ── What It Needs ──────────────────────────────────────────── -->
+<div class="step-card amber">
+  <div class="step-num">📋</div>
+  <div class="step-title yellow">🎯 What the Attack Needs to Start</div>
+  <div class="step-body">
+    Three things are required — nothing more:<br/><br/>
+    <span class="badge badge-blue">1</span>
+    <strong>A valid IV + Ciphertext</strong> — intercepted from network traffic,
+    stolen from a cookie, extracted from a URL parameter, or obtained from a database leak.<br/><br/>
+    <span class="badge badge-red">2</span>
+    <strong>Access to the vulnerable server</strong> — a server that decrypts attacker-supplied
+    ciphertext and returns different responses for valid vs invalid padding
+    (HTTP 200 vs 403, different error messages, or even timing differences).<br/><br/>
+    <span class="badge badge-amber">3</span>
+    <strong>Knowledge of the block size</strong> — AES always uses 16-byte blocks (128-bit).
+    This is publicly known and never secret.
+  </div>
+</div>
+
+<!-- ── The 5 Steps ────────────────────────────────────────────── -->
+<h2 style="margin-bottom:.6rem">🔄 The Attack — Step by Step</h2>
+
+<div class="step-card">
+  <div class="step-num">1</div>
+  <div class="step-title blue">Encryption (Setup)</div>
+  <div class="step-body">
+    The server encrypts a plaintext message using AES-CBC with a secret key and a random IV.
+    The attacker intercepts or obtains the <strong>IV</strong> and <strong>Ciphertext</strong>.
+    The key is never seen.
+    <div class="code-block"><span class="hl-amber">Plaintext</span>  →  <span class="hl-blue">[AES-CBC Encrypt with secret key]</span>  →  <span class="hl-green">IV + Ciphertext</span>
+
+<span class="hl-green">Attacker obtains:</span>  IV = f8800b32...   CT = 25fc7171...</div>
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card amber">
+  <div class="step-num">2</div>
+  <div class="step-title yellow">Crafting a Fake Block</div>
+  <div class="step-body">
+    The attacker creates a <strong>crafted 16-byte block</strong> and injects a guess value
+    at the target byte position. All other bytes are set to produce the desired
+    PKCS#7 padding value once decrypted.
+    <div class="code-block"><span class="hl-blue">For byte [15] (last byte), target padding = 0x01:</span>
+
+crafted[15] = <span class="hl-amber">guess</span>  ← try 0x00, 0x01, ..., 0xFF
+crafted[0..14] = 0x00  ← don't care yet
+
+<span class="hl-blue">Send to server:</span>  POST /decrypt  { iv: crafted,  ciphertext: real_ct_block }</div>
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card red">
+  <div class="step-num">3</div>
+  <div class="step-title red">Reading the Oracle</div>
+  <div class="step-body">
+    The server decrypts the block using the real key and checks the padding.
+    It leaks the result through its HTTP response code:
+    <div class="code-block"><span class="hl-red">HTTP 403</span>  →  Padding invalid  →  Wrong guess, try next value
+<span class="hl-green">HTTP 200</span>  →  Padding valid!  →  This guess produced 0x01 padding ✔
+
+<span class="hl-amber">Repeat up to 256 times per byte</span> (average ~128 guesses)</div>
+    The attacker sends up to 256 HTTP requests per byte until the server responds HTTP 200.
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card purple">
+  <div class="step-num">4</div>
+  <div class="step-title purple">XOR Math — Recovering the Byte</div>
+  <div class="step-body">
+    Once a valid guess is found, two XOR operations reveal the plaintext byte:
+    <div class="code-block"><span class="hl-blue">Step 1:</span>  intermediate = <span class="hl-amber">guess</span> ⊕ <span class="hl-purple">pad_value</span>
+        <span class="hl-amber">0xa1</span> ⊕ <span class="hl-purple">0x10</span> = <span class="hl-blue">0xb1</span>   (intermediate byte)
+
+<span class="hl-blue">Step 2:</span>  plaintext   = <span class="hl-blue">intermediate</span> ⊕ <span class="hl-green">prev_block[byte_idx]</span>
+        <span class="hl-blue">0xb1</span> ⊕ <span class="hl-green">0xf8</span> = <span class="hl-green">0x49  →  'I'</span>  ✔
+
+<span class="hl-amber">Why this works:</span> AES-CBC decryption XORs with the previous block internally.
+By controlling the crafted block we reverse that XOR to find the plaintext.</div>
+  </div>
+</div>
+
+<div class="flow-arrow">▼</div>
+
+<div class="step-card green">
+  <div class="step-num">5</div>
+  <div class="step-title green">Full Recovery</div>
+  <div class="step-body">
+    Repeat for all 16 bytes per block (right to left), then for every block.
+    Strip PKCS#7 padding from the end. The full plaintext is recovered.
+    <div class="code-block"><span class="hl-amber">Attack order:</span>  byte[15] → byte[14] → ... → byte[0] → next block...
+
+<span class="hl-green">Result:</span>  "I would like to"   ← recovered without key
+<span class="hl-blue">Cost:</span>   ~128 queries × 16 bytes = ~2048 HTTP requests
+<span class="hl-red">Key:</span>    Never used. Never needed.</div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- ── Why Dangerous / How to Fix ────────────────────────────── -->
+<div class="two-col">
+  <div>
+    <h2 style="margin-bottom:.7rem">⚠️ Why Is This Dangerous?</h2>
+    <div class="step-card red" style="margin-bottom:.6rem">
+      <div class="step-title red">Real-World Data at Risk</div>
+      <div class="step-body">
+        Any data a server encrypts with AES-CBC and decrypts on request is vulnerable —
+        session cookies containing usernames and roles, authentication tokens,
+        encrypted API payloads, medical records, and financial data.
+      </div>
+    </div>
+    <div class="step-card red">
+      <div class="step-title red">Where Attackers Get IV + Ciphertext</div>
+      <div class="step-body">
+        <strong>Browser cookies</strong> — visible in DevTools → Application → Cookies.<br/>
+        <strong>Network traffic</strong> — intercepted with Burp Suite or Wireshark.<br/>
+        <strong>URL parameters</strong> — some apps embed encrypted tokens in URLs.<br/>
+        <strong>Database leaks</strong> — encrypted columns come with IVs attached.<br/>
+        <strong>API responses</strong> — tokens returned openly in JSON responses.
+      </div>
+    </div>
+  </div>
+  <div>
+    <h2 style="margin-bottom:.7rem">🛡️ How to Fix It</h2>
+    <div class="step-card green" style="margin-bottom:.6rem">
+      <div class="step-title green">Use Authenticated Encryption</div>
+      <div class="step-body">
+        Replace AES-CBC with <strong>AES-GCM</strong> (Galois/Counter Mode).
+        GCM includes a built-in authentication tag — any tampering with the ciphertext
+        is detected before decryption even begins, eliminating the oracle entirely.
+      </div>
+    </div>
+    <div class="step-card green">
+      <div class="step-title green">Other Mitigations</div>
+      <div class="step-body">
+        <strong>Encrypt-then-MAC</strong> — apply an HMAC over the ciphertext and verify
+        it before decryption. If the MAC fails, always return the same generic error.<br/><br/>
+        <strong>Constant-time responses</strong> — never reveal whether padding or
+        authentication failed through different error messages or timing.
+        Always return the same opaque error regardless of failure reason.
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- ── Real-World CVEs ────────────────────────────────────────── -->
+<h2 style="margin-bottom:.7rem">📜 Real-World Attacks Using This Technique</h2>
+<div class="grid3">
+  <div class="step-card amber">
+    <div class="step-title yellow">POODLE (2014)</div>
+    <div class="step-body">
+      Exploited SSL 3.0's CBC padding to decrypt HTTPS cookies.
+      Forced the entire internet to deprecate SSL 3.0.
+      <span class="badge badge-red">CVE-2014-3566</span>
+    </div>
+  </div>
+  <div class="step-card amber">
+    <div class="step-title yellow">Lucky Thirteen (2013)</div>
+    <div class="step-body">
+      A timing-based padding oracle against TLS 1.0/1.1/1.2 using CBC mode.
+      Even "constant-time" implementations were vulnerable.
+      <span class="badge badge-red">CVE-2013-0169</span>
+    </div>
+  </div>
+  <div class="step-card amber">
+    <div class="step-title yellow">ASP.NET Padding Oracle (2010)</div>
+    <div class="step-body">
+      Allowed attackers to decrypt ViewState and authentication cookies in
+      ASP.NET web applications, exposing session data of millions of sites.
+      <span class="badge badge-red">CVE-2010-3332</span>
+    </div>
+  </div>
+</div>

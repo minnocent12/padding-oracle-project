@@ -1,0 +1,92 @@
+<!-- TAB — GCM ORACLE PROBE
+     JS lives in static/js/tab_gcm_attack.js -->
+
+<div class="safe-banner">
+  🛡 You are probing the <strong>secure AES-GCM server</strong> on port 5001.
+  The same padding oracle attack used against CBC will be attempted here.
+  Watch what happens.
+</div>
+
+<!-- Step 1: Encrypt -->
+<div class="panel">
+  <h2>🎯 Step 1 — Encrypt a Message via GCM Server</h2>
+  <div class="info" style="margin-bottom:.6rem">
+    First get a real GCM ciphertext. This simulates the attacker intercepting
+    encrypted traffic from the GCM server.
+  </div>
+  <label class="field-label">Plaintext to encrypt:</label>
+  <input id="gcm-atk-pt" value="Attack me if you can!" placeholder="Enter any message"/>
+  <button class="btn-green" id="btn-gcm-encrypt" onclick="gcmAtkEncrypt()">
+    🔒 Encrypt via GCM Server
+  </button>
+
+  <div id="gcm-atk-enc-result" style="display:none;margin-top:.8rem">
+    <div class="grid3">
+      <div class="ct-panel-inner">
+        <div class="ct-label">🟢 Nonce:</div>
+        <div class="ct-value ct-green" id="gcm-atk-nonce">—</div>
+      </div>
+      <div class="ct-panel-inner">
+        <div class="ct-label">🔵 Ciphertext:</div>
+        <div class="ct-value ct-hex-val" id="gcm-atk-ct">—</div>
+      </div>
+      <div class="ct-panel-inner">
+        <div class="ct-label">🟡 Auth Tag:</div>
+        <div class="ct-value ct-amber" id="gcm-atk-tag">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2: Run probe -->
+<div class="panel">
+  <h2>⚔ Step 2 — Run the Oracle Probe (256 Tampered Requests)</h2>
+  <div class="info" style="margin-bottom:.6rem">
+    This sends 256 crafted requests to the GCM server — exactly what the padding oracle
+    attack does per byte against CBC. Each request has a different tampered nonce/ciphertext.
+    Watch for any HTTP 200 response — that would be the oracle signal.
+  </div>
+
+  <button class="btn-red" id="btn-gcm-probe" onclick="gcmRunProbe()" disabled>
+    ⚔ Run Oracle Probe (256 requests)
+  </button>
+  <button class="btn-blue" onclick="gcmReset()">↺ Reset</button>
+
+  <div style="margin-top:.8rem" id="gcm-probe-running" style="display:none">
+    <div class="prog-wrap">
+      <div class="prog-bar green" id="gcm-probe-bar"></div>
+    </div>
+    <div class="dim" style="font-size:.75rem;text-align:center" id="gcm-probe-status">
+      Waiting...
+    </div>
+  </div>
+</div>
+
+<!-- Step 3: Live response grid (fills during probe) -->
+<div class="panel" id="gcm-probe-panel" style="display:none">
+  <h2>📡 Step 3 — Live Oracle Response Grid</h2>
+  <div class="info" style="margin-bottom:.5rem">
+    Each cell = one HTTP request. In CBC, <span class="green">HTTP 200</span> appears
+    when the right guess is found — that's the oracle signal.
+    In GCM, watch what every single cell shows.
+  </div>
+
+  <div class="grid3" style="margin-bottom:.8rem">
+    <div class="stat-card">
+      <span class="stat-val green" id="gcm-p-total">0</span>
+      <span class="stat-lbl">Requests Sent</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" id="gcm-p-unique" style="color:#8b949e">—</span>
+      <span class="stat-lbl">Unique Response Codes</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val dim" id="gcm-p-elapsed">—</span>
+      <span class="stat-lbl">Time Elapsed</span>
+    </div>
+  </div>
+
+  <div class="probe-grid" id="gcm-probe-grid"></div>
+
+  <div class="verdict" id="gcm-verdict"></div>
+</div>
