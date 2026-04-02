@@ -303,6 +303,11 @@ async function doEncryptDebug() {
   show("enc-spinner"); hide("enc-summary");
   document.getElementById("enc-steps").innerHTML = "";
 
+  // Reset corruption state when new encryption is done
+  _corrupted = false;
+  const corruptBtn = document.querySelector('button.red[onclick="corruptAndDecrypt()"]');
+  if (corruptBtn) { corruptBtn.textContent = "☠ Corrupt + Decrypt"; corruptBtn.style.background = ""; }
+
   const resp = await fetch("/encrypt-debug", {
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({plaintext: pt})
@@ -540,7 +545,18 @@ function buildPaddedGrid(d) {
   return `<div class="byte-grid">${cells}</div>`;
 }
 
+let _corrupted = false;
+
 async function corruptAndDecrypt() {
+  _corrupted = !_corrupted;
+  const btn = document.querySelector('button.red[onclick="corruptAndDecrypt()"]');
+  if (_corrupted) {
+    btn.textContent = "↩ Corrupted — Click to Restore";
+    btn.style.background = "#7c3aed";
+  } else {
+    btn.textContent = "☠ Corrupt + Decrypt";
+    btn.style.background = "";
+  }
   await doDecryptDebug(true);
 }
 

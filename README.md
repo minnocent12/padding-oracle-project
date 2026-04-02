@@ -67,6 +67,7 @@ padding_oracle_project/
 │   └── templates/
 │       └── dashboard.html           # 5-tab analytics dashboard
 │
+├── start_all.sh                         # Launch all servers + open browser tabs
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -113,7 +114,31 @@ The `.env` file sets the AES-CBC secret key for Phase 1. The default value works
 
 ## Running Each Phase
 
-All four phases can run simultaneously. Open a separate terminal for each.
+### Quick Start — Launch All Servers at Once
+
+The easiest way to run the project is with the provided launch script, which starts all four servers and opens them in your browser simultaneously:
+
+```bash
+# macOS / Linux — make executable first (one-time setup)
+chmod +x start_all.sh
+./start_all.sh
+
+# Windows (Git Bash or WSL)
+bash start_all.sh
+```
+
+This will:
+1. Start Phase 1 (port 5000), Phase 3 (port 5001), Phase 2 (port 5002), and Phase 4 (port 5004)
+2. Wait for all servers to initialize
+3. Open all four UIs in your default browser
+
+Press `Ctrl+C` in the terminal to stop all servers at once.
+
+> **Compatibility:** Works on macOS, Linux, and Windows (via Git Bash or WSL). The script auto-detects the OS for opening the browser and auto-detects the venv location (`venv/bin/python` on macOS/Linux, `venv/Scripts/python.exe` on Windows).
+
+---
+
+All four phases can also run manually. Open a separate terminal for each.
 
 ### Phase 1 — Vulnerable AES-CBC Server
 
