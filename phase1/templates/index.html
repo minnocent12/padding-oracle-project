@@ -359,7 +359,7 @@ async function doEncryptDebug() {
     html += `
     <div class="panel">
       <h2>Step 3 — Block ${bi} Encryption</h2>
-      <div class="block-badge">Block ${bi} of ${d.num_blocks}</div>
+      <div class="block-badge">Block ${bi + 1} of ${d.num_blocks}</div>
 
       <div class="step-label" style="margin-top:.7rem">
         <span class="step-num">1</span> Plaintext block:
@@ -478,7 +478,7 @@ async function doDecryptDebug(corrupted=false) {
     html += `
     <div class="panel">
       <h2>Step 2 — Block ${bi} Decryption</h2>
-      <div class="block-badge">Block ${bi} of ${d.num_blocks}</div>
+      <div class="block-badge">Block ${bi + 1} of ${d.num_blocks}</div>
 
       <div class="step-label" style="margin-top:.7rem">
         <span class="step-num">1</span> Ciphertext block ${bi}:
