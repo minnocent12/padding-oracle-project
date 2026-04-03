@@ -1,0 +1,75 @@
+services:
+
+  # ── Phase 1: Vulnerable AES-CBC server ───────────────────────────────────────
+  phase1:
+    build: .
+    working_dir: /app/phase1
+    command: python server.py
+    ports:
+      - "5000:5000"
+    env_file: [.env]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/status')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── Phase 3: Secure AES-GCM server ───────────────────────────────────────────
+  phase3:
+    build: .
+    working_dir: /app/phase3
+    command: python server.py
+    ports:
+      - "5001:5001"
+    env_file: [.env]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5001/status')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── Phase 2: Attack visualizer ────────────────────────────────────────────────
+  phase2:
+    build: .
+    working_dir: /app/phase2
+    command: python attack_visualizer.py
+    ports:
+      - "5002:5002"
+    env_file: [.env]
+    environment:
+      - CBC_URL=http://phase1:5000
+      - GCM_URL=http://phase3:5001
+      - STATS_FILE=/data/attack_stats.json
+    volumes:
+      - stats:/data
+    depends_on:
+      phase1:
+        condition: service_healthy
+      phase3:
+        condition: service_healthy
+
+  # ── Phase 4: Analytics dashboard ─────────────────────────────────────────────
+  phase4:
+    build: .
+    working_dir: /app/phase4
+    command: python server.py
+    ports:
+      - "5004:5004"
+    env_file: [.env]
+    environment:
+      - CBC_URL=http://phase1:5000
+      - GCM_URL=http://phase3:5001
+      - STATS_FILE=/data/attack_stats.json
+    volumes:
+      - stats:/data
+    depends_on:
+      phase1:
+        condition: service_healthy
+      phase3:
+        condition: service_healthy
+
+# Shared volume so Phase 2 attack results are visible to Phase 4 dashboard
+volumes:
+  stats:

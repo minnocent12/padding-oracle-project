@@ -23,8 +23,8 @@ from datetime import datetime
 
 STATS_FILE  = "attack_stats.json"
 OUT_PNG     = "report.png"
-CBC_URL     = "http://127.0.0.1:5000"
-GCM_URL     = "http://127.0.0.1:5001"
+CBC_URL     = os.environ.get("CBC_URL", "http://127.0.0.1:5000")
+GCM_URL     = os.environ.get("GCM_URL", "http://127.0.0.1:5001")
 
 # ── Colour palette ────────────────────────────────────────────────────────────
 BG      = "#0d1117"

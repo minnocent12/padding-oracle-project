@@ -67,7 +67,11 @@ padding_oracle_project/
 │   └── templates/
 │       └── dashboard.html           # 5-tab analytics dashboard
 │
-├── start_all.sh                         # Launch all servers + open browser tabs
+├── start_all.sh                         # Launch all servers + open browser tabs (local)
+├── docker_start.sh                      # Launch all containers + open browser tabs (Docker)
+├── Dockerfile                           # Single image for all phases (Python 3.10-slim)
+├── docker-compose.yml                   # Orchestrates all 4 services with health checks
+├── .dockerignore                        # Excludes venv, .env, caches from build context
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -112,7 +116,92 @@ The `.env` file sets the AES-CBC secret key for Phase 1. The default value works
 
 ---
 
-## Running Each Phase
+## Docker (Recommended)
+
+Docker is the easiest way to run the project — no Python setup, no virtual environment, no dependency conflicts. All four services start in isolated containers with a single command.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+
+### Quick Start
+
+```bash
+# 1. Copy the environment file
+cp .env.example .env
+
+# 2. Build the images (one-time, ~60 seconds)
+docker compose build
+
+# 3. Start all containers + auto-open browser tabs
+./docker_start.sh
+```
+
+`docker_start.sh` starts all 4 containers in the background, waits until each service passes its health check, then opens all four browser tabs automatically.
+
+### Service URLs
+
+| Service | URL |
+|---|---|
+| Phase 1 — Vulnerable CBC Server | http://localhost:5000 |
+| Phase 3 — Secure GCM Server | http://localhost:5001 |
+| Phase 2 — Attack Visualizer | http://localhost:5002 |
+| Phase 4 — Analytics Dashboard | http://localhost:5004 |
+
+### Common Commands
+
+```bash
+# Start containers (background, no browser)
+docker compose up -d
+
+# Start containers (foreground, stream logs)
+docker compose up
+
+# Follow live logs from all containers
+docker compose logs -f
+
+# Follow logs from a specific phase
+docker compose logs -f phase1
+
+# Stop all containers
+docker compose down
+
+# Stop and delete the shared stats volume
+docker compose down -v
+
+# Rebuild after code changes
+docker compose build
+./docker_start.sh
+```
+
+### How the Containers Are Wired
+
+All four services run as separate containers on a shared Docker network. Inter-service communication uses container hostnames (`phase1`, `phase2`, `phase3`, `phase4`) instead of `127.0.0.1`. Phase 2 and Phase 4 share a named Docker volume (`stats`) so attack results written by Phase 2 are immediately visible to the Phase 4 dashboard.
+
+```
+┌─────────────┐     ┌─────────────┐
+│   phase1    │     │   phase3    │
+│  port 5000  │     │  port 5001  │
+└──────┬──────┘     └──────┬──────┘
+       │  HTTP (healthy)   │
+       └────────┬──────────┘
+                │ depends_on
+       ┌────────┴──────────┐
+       ▼                   ▼
+┌─────────────┐     ┌─────────────┐
+│   phase2    │     │   phase4    │
+│  port 5002  │     │  port 5004  │
+└──────┬──────┘     └──────┬──────┘
+       │   shared volume   │
+       └────── stats ──────┘
+               (attack_stats.json)
+```
+
+---
+
+## Running Each Phase (Manual / Local)
+
+> If you prefer Docker, see the [Docker](#docker-recommended) section above — it handles everything automatically.
 
 ### Quick Start — Launch All Servers at Once
 

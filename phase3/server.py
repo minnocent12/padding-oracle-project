@@ -120,4 +120,4 @@ if __name__ == "__main__":
     print("[*] Algorithm : AES-256-GCM")
     print("[*] Key size  : 256-bit (generated at startup)")
     print("[+] Padding oracle attacks are impossible against this server.")
-    app.run(host="127.0.0.1", port=5001, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=5001, debug=False, threaded=True)

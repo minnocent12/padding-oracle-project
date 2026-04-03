@@ -17,8 +17,9 @@ from flask import Flask, render_template, request, jsonify, Response, stream_wit
 
 app   = Flask(__name__)
 BLOCK = 16
-CBC   = "http://127.0.0.1:5000"
-GCM   = "http://127.0.0.1:5001"
+CBC        = os.environ.get("CBC_URL", "http://127.0.0.1:5000")
+GCM        = os.environ.get("GCM_URL", "http://127.0.0.1:5001")
+STATS_FILE = os.environ.get("STATS_FILE", "../phase4/attack_stats.json")
 
 _state = {
     "running": False,
@@ -144,8 +145,8 @@ def run_attack(iv: bytes, ct: bytes, target_pt: str):
     rec_str   = "".join(chr(b) if 32<=b<127 else "." for b in recovered)
     elapsed   = round(time.time() - t0, 2)
 
-    os.makedirs("../phase4", exist_ok=True)
-    with open("../phase4/attack_stats.json", "w") as f:
+    os.makedirs(os.path.dirname(os.path.abspath(STATS_FILE)), exist_ok=True)
+    with open(STATS_FILE, "w") as f:
         json.dump({"target": target_pt, "recovered": rec_str,
                    "total_queries": total_q, "per_byte": per_byte}, f, indent=2)
 
@@ -330,4 +331,4 @@ if __name__ == "__main__":
     print("[*] Phase 2 attack visualizer running at http://127.0.0.1:5002")
     print("[*] CBC server expected on port 5000 (phase1/server.py)")
     print("[*] GCM server expected on port 5001 (phase3/server.py)")
-    app.run(host="127.0.0.1", port=5002, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=5002, debug=False, threaded=True)

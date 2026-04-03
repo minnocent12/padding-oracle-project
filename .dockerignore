@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pptx
+*.pdf
+.env
+.git/
+.DS_Store
+.vscode/
+.idea/
+phase4/attack_stats.json

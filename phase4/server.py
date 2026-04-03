@@ -24,9 +24,9 @@ from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
                                  Table, TableStyle, HRFlowable)
 
 app        = Flask(__name__)
-STATS_FILE = "../phase4/attack_stats.json"
-CBC_URL    = "http://127.0.0.1:5000"
-GCM_URL    = "http://127.0.0.1:5001"
+STATS_FILE = os.environ.get("STATS_FILE", "../phase4/attack_stats.json")
+CBC_URL    = os.environ.get("CBC_URL",   "http://127.0.0.1:5000")
+GCM_URL    = os.environ.get("GCM_URL",   "http://127.0.0.1:5001")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -388,4 +388,4 @@ def index():
 if __name__ == "__main__":
     print("[*] Phase 4 dashboard running at http://127.0.0.1:5004")
     print("[*] Requires phase1, phase2, phase3 servers running")
-    app.run(host="127.0.0.1", port=5004, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=5004, debug=False, threaded=True)
