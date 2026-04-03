@@ -25,6 +25,7 @@ __pycache__/
 *.pdf
 phase4/dashboard.png
 phase4/report.png
+phase4/attack_stats.json
 
 # IDE
 .vscode/
