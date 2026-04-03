@@ -72,9 +72,16 @@
       <div class="ct-value ct-hex-val" id="ct-hex">—</div>
     </div>
   </div>
+  <div style="margin-top:.6rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+    <button class="btn-blue" onclick="copyBoth()" id="btn-copy-both" style="font-size:.8rem">
+      📋 Copy IV + CT
+    </button>
+    <span id="copy-confirm" style="font-size:.75rem;color:#3fb950;display:none">✔ Copied!</span>
+  </div>
   <div class="note-box" style="margin-top:.5rem">
-    💡 Copy these values and try them in the <strong>🕵️ Attacker Tool</strong> tab to manually
-    send them to the server and see the oracle in action.
+    💡 Click <strong>📋 Copy IV + CT</strong> above, then switch to the
+    <strong>🕵️ Attacker Tool</strong> tab and click <strong>📋 Paste IV + CT</strong>
+    to fill both fields instantly.
   </div>
 </div>
 

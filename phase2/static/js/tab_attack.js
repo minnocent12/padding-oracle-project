@@ -279,6 +279,26 @@ function setStatus(msg, cls) {
   el.innerHTML = msg.includes("...") ? `<span class="spinner"></span>${msg}` : msg;
 }
 
+// ── Copy IV + CT to shared clipboard ─────────────────────────
+function copyBoth() {
+  const iv = document.getElementById("ct-iv").textContent.trim();
+  const ct = document.getElementById("ct-hex").textContent.trim();
+  if (!iv || iv === "·" || !ct || ct === "·") {
+    setStatus("Run an attack first to generate IV + CT", "red");
+    return;
+  }
+  // Store in page-level variable for pasteBoth() in tab_manual.js
+  window._copiedIV = iv;
+  window._copiedCT = ct;
+
+  // Also copy to system clipboard as formatted text
+  navigator.clipboard.writeText(`IV: ${iv}\nCiphertext: ${ct}`).catch(() => {});
+
+  const confirm = document.getElementById("copy-confirm");
+  confirm.style.display = "inline";
+  setTimeout(() => { confirm.style.display = "none"; }, 2000);
+}
+
 // ── Full UI reset ─────────────────────────────────────────────
 function resetUI(full = true) {
   if (evtSource)   { evtSource.close();        evtSource   = null; }

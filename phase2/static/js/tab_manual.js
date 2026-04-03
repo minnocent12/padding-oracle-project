@@ -105,6 +105,26 @@ async function encryptForManual() {
   }
 }
 
+// ── Paste both IV + CT from Live Attack tab ───────────────────
+function pasteBoth() {
+  const iv = window._copiedIV;
+  const ct = window._copiedCT;
+  if (!iv || !ct) {
+    const box = document.getElementById("man-resp");
+    box.className   = "resp-box resp-info";
+    box.textContent = "⚠ Nothing copied yet — go to the Live Attack tab, run an attack, then click 📋 Copy IV + CT.";
+    return;
+  }
+  document.getElementById("man-iv").value = iv;
+  document.getElementById("man-ct").value = ct;
+
+  const confirm = document.getElementById("paste-confirm");
+  if (confirm) {
+    confirm.style.display = "inline";
+    setTimeout(() => { confirm.style.display = "none"; }, 2000);
+  }
+}
+
 function copyToManual(which) {
   if (which === "iv") {
     document.getElementById("man-iv").value =

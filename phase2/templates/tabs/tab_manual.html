@@ -26,9 +26,11 @@
       <input id="man-ct" placeholder="e.g. 25fc7171783cb0fec71576671498d97f"/>
     </div>
   </div>
-  <button class="btn-green" onclick="manualDecrypt()">🔍 Send to Oracle (decrypt)</button>
-  <button class="btn-amber" onclick="scrollToEncrypt()">🔒 Encrypt a new plaintext first</button>
-  <button class="btn-blue"  onclick="clearManual()">✕ Clear</button>
+  <button class="btn-green"  onclick="manualDecrypt()">🔍 Send to Oracle (decrypt)</button>
+  <button class="btn-blue"   onclick="pasteBoth()" id="btn-paste-both">📋 Paste IV + CT</button>
+  <button class="btn-amber"  onclick="scrollToEncrypt()">🔒 Encrypt a new plaintext first</button>
+  <button class="btn-red"    onclick="clearManual()">✕ Clear</button>
+  <span id="paste-confirm" style="font-size:.75rem;color:#3fb950;display:none">✔ Pasted!</span>
   <div style="margin-top:.8rem">
     <label class="field-label">Server Response:</label>
     <div class="resp-box resp-neutral" id="man-resp">

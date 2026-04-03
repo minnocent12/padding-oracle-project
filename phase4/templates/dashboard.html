@@ -629,6 +629,7 @@ function buildChart(perByte) {
   const avgPct = Math.round(avg   / maxQ * 100);
   const midPct = Math.round(128   / maxQ * 100);
 
+  chart.innerHTML = "";
   chart.style.position = "relative";
   const avgLine = document.createElement("div");
   avgLine.className = "chart-ref-line";
@@ -643,13 +644,13 @@ function buildChart(perByte) {
   chart.appendChild(midLine);
 
   perByte.forEach((q, i) => {
-    const pct = Math.round(q / maxQ * 100);
+    const px  = Math.round(q / maxQ * h);
     const col = q > 200 ? "#f85149" : q > 100 ? "#58a6ff" : "#3fb950";
     const wrap = document.createElement("div");
     wrap.className = "bar-wrap";
     wrap.style.width = `${Math.max(100/perByte.length, 14)}px`;
     wrap.innerHTML = `
-      <div class="bar-body" style="height:${pct}%;background:${col}"
+      <div class="bar-body" style="height:${px}px;background:${col}"
            data-tip="Byte ${i}: ${q} queries"></div>
       <div class="bar-lbl">${i}</div>`;
     chart.appendChild(wrap);
