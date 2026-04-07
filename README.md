@@ -6,6 +6,19 @@
 
 ---
 
+## Live Demo (AWS)
+
+The project is deployed on AWS EC2 (t3.small, us-east-2). No setup required — open any link below directly in your browser:
+
+| Service | Live URL |
+|---|---|
+| Phase 1 — Vulnerable CBC Server | http://18.188.251.77:5000 |
+| Phase 2 — Attack Visualizer | http://18.188.251.77:5002 |
+| Phase 3 — Secure GCM Server | http://18.188.251.77:5001 |
+| Phase 4 — Analytics Dashboard | http://18.188.251.77:5004 |
+
+---
+
 ## Overview
 
 This project is a full-stack cryptographic vulnerability study demonstrating how AES-CBC encryption is vulnerable to padding oracle attacks, implementing a live byte-wise attack with browser visualization, then proving that migrating to AES-256-GCM completely eliminates the attack surface. The project spans four interconnected phases, each running as an independent server with its own browser UI.
@@ -124,7 +137,7 @@ Docker is the easiest way to run the project — no Python setup, no virtual env
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 
-### Quick Start
+### Quick Start (Local)
 
 ```bash
 # 1. Copy the environment file
@@ -139,7 +152,7 @@ docker compose build
 
 `docker_start.sh` starts all 4 containers in the background, waits until each service passes its health check, then opens all four browser tabs automatically.
 
-### Service URLs
+### Service URLs (Local)
 
 | Service | URL |
 |---|---|
@@ -196,6 +209,82 @@ All four services run as separate containers on a shared Docker network. Inter-s
        └────── stats ──────┘
                (attack_stats.json)
 ```
+
+---
+
+## AWS Deployment
+
+The project is deployed on AWS EC2 using Docker Compose. The setup mirrors the local Docker workflow exactly.
+
+### Infrastructure
+
+| Resource | Details |
+|---|---|
+| Instance type | t3.small (2 vCPU, 2 GiB RAM) |
+| OS | Amazon Linux 2023 |
+| Region | us-east-2 (Ohio) |
+| Storage | 20 GiB gp3 |
+| Public IP | 18.188.251.77 |
+
+### Security Group (Inbound Rules)
+
+| Port | Protocol | Purpose |
+|---|---|---|
+| 22 | TCP | SSH access |
+| 5000 | TCP | Phase 1 — CBC Server |
+| 5001 | TCP | Phase 3 — GCM Server |
+| 5002 | TCP | Phase 2 — Attack Visualizer |
+| 5004 | TCP | Phase 4 — Dashboard |
+
+### Deploy to a New EC2 Instance
+
+```bash
+# 1. SSH into the instance
+ssh -i your-key.pem ec2-user@<your-ec2-ip>
+
+# 2. Install Docker and Docker Compose
+sudo dnf update -y
+sudo dnf install -y docker git
+sudo systemctl start docker && sudo systemctl enable docker
+sudo usermod -aG docker ec2-user
+
+# Install Docker Compose
+sudo curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Install Docker Buildx (required for compose build)
+sudo mkdir -p /usr/local/lib/docker/cli-plugins
+sudo curl -SL https://github.com/docker/buildx/releases/download/v0.19.3/buildx-v0.19.3.linux-amd64 -o /usr/local/lib/docker/cli-plugins/docker-buildx
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+
+# 3. Clone the repository
+git clone https://github.com/minnocent12/padding-oracle-project.git
+cd padding-oracle-project
+
+# 4. Create the environment file
+nano .env
+# Paste your CBC_SECRET_KEY, GCM_SECRET_KEY, FLASK_DEBUG=False
+
+# 5. Build and start all containers
+sudo docker-compose up -d --build
+```
+
+### Verify All Services Are Running
+
+```bash
+sudo docker-compose ps
+```
+
+All four containers should show `Up` and `(healthy)` status.
+
+### Service URLs (AWS)
+
+| Service | URL |
+|---|---|
+| Phase 1 — Vulnerable CBC Server | http://18.188.251.77:5000 |
+| Phase 2 — Attack Visualizer | http://18.188.251.77:5002 |
+| Phase 3 — Secure GCM Server | http://18.188.251.77:5001 |
+| Phase 4 — Analytics Dashboard | http://18.188.251.77:5004 |
 
 ---
 
