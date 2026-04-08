@@ -6,19 +6,6 @@
 
 ---
 
-## Live Demo (AWS)
-
-The project is deployed on AWS EC2 (t3.small, us-east-2). No setup required — open any link below directly in your browser:
-
-| Service | Live URL |
-|---|---|
-| Phase 1 — Vulnerable CBC Server | http://18.188.251.77:5000 |
-| Phase 2 — Attack Visualizer | http://18.188.251.77:5002 |
-| Phase 3 — Secure GCM Server | http://18.188.251.77:5001 |
-| Phase 4 — Analytics Dashboard | http://18.188.251.77:5004 |
-
----
-
 ## Overview
 
 This project is a full-stack cryptographic vulnerability study demonstrating how AES-CBC encryption is vulnerable to padding oracle attacks, implementing a live byte-wise attack with browser visualization, then proving that migrating to AES-256-GCM completely eliminates the attack surface. The project spans four interconnected phases, each running as an independent server with its own browser UI.
@@ -29,6 +16,19 @@ This project is a full-stack cryptographic vulnerability study demonstrating how
 | Phase 2 | Padding oracle attack engine + attacker tool + GCM probe | 5002 |
 | Phase 3 | Secure AES-GCM server with encryption/decryption pipeline | 5001 |
 | Phase 4 | Live analytics dashboard + PDF report export | 5004 |
+
+---
+
+## Live Demo (AWS)
+
+The project is deployed on AWS EC2 (t3.small, us-east-2). No setup required — open any link below directly in your browser:
+
+| Service | Live URL |
+|---|---|
+| Phase 1 — Vulnerable CBC Server | http://18.188.251.77:5000 |
+| Phase 2 — Attack Visualizer | http://18.188.251.77:5002 |
+| Phase 3 — Secure GCM Server | http://18.188.251.77:5001 |
+| Phase 4 — Analytics Dashboard | http://18.188.251.77:5004 |
 
 ---
 
@@ -94,14 +94,22 @@ padding_oracle_project/
 
 ## Setup
 
-### 1. Clone or create the project folder
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/minnocent12/padding-oracle-project.git
 cd padding-oracle-project
 ```
 
-### 2. Create and activate a virtual environment
+Then choose how you want to run the project below.
+
+---
+
+## Running the Project
+
+### Option A — Quick Start (launch all servers at once)
+
+#### 1. Create and activate a virtual environment
 
 ```bash
 python -m venv venv
@@ -113,13 +121,13 @@ source venv/bin/activate
 venv\Scripts\activate
 ```
 
-### 3. Install all dependencies
+#### 2. Install all dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure the environment file
+#### 3. Configure the environment file
 
 ```bash
 cp .env.example .env
@@ -127,41 +135,66 @@ cp .env.example .env
 
 The `.env` file sets the AES-CBC secret key for Phase 1. The default value works out of the box. Do not use the default key in any real system.
 
+#### 4. Launch all servers
+
+```bash
+# macOS / Linux — make executable first (one-time setup)
+chmod +x start_all.sh
+./start_all.sh
+
+# Windows (Git Bash or WSL)
+bash start_all.sh
+```
+
+This will:
+1. Start Phase 1 (port 5000), Phase 2 (port 5002), Phase 3 (port 5001), and Phase 4 (port 5004)
+2. Wait for all servers to initialize
+3. Open all four UIs in your default browser
+
+Press `Ctrl+C` in the terminal to stop all servers at once.
+
+> **Compatibility:** Works on macOS, Linux, and Windows (via Git Bash or WSL). The script auto-detects the OS for opening the browser and auto-detects the venv location (`venv/bin/python` on macOS/Linux, `venv/Scripts/python.exe` on Windows).
+
 ---
 
-## Docker (Recommended)
+### Option B — Docker (Recommended)
 
 Docker is the easiest way to run the project — no Python setup, no virtual environment, no dependency conflicts. All four services start in isolated containers with a single command.
 
-### Prerequisites
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-
-### Quick Start (Local)
+#### 1. Configure the environment file
 
 ```bash
-# 1. Copy the environment file
 cp .env.example .env
+```
 
-# 2. Build the images (one-time, ~60 seconds)
+The `.env` file sets the secret keys for Phase 1 and Phase 3. The default values work out of the box. Do not use the default keys in any real system.
+
+#### 2. Build the images (one-time, ~60 seconds)
+
+```bash
 docker compose build
+```
 
-# 3. Start all containers + auto-open browser tabs
+#### 3. Start all containers + auto-open browser tabs
+
+```bash
 ./docker_start.sh
 ```
 
 `docker_start.sh` starts all 4 containers in the background, waits until each service passes its health check, then opens all four browser tabs automatically.
 
-### Service URLs (Local)
+**Service URLs (Local Docker):**
 
 | Service | URL |
 |---|---|
 | Phase 1 — Vulnerable CBC Server | http://localhost:5000 |
-| Phase 3 — Secure GCM Server | http://localhost:5001 |
 | Phase 2 — Attack Visualizer | http://localhost:5002 |
+| Phase 3 — Secure GCM Server | http://localhost:5001 |
 | Phase 4 — Analytics Dashboard | http://localhost:5004 |
 
-### Common Commands
+**Common Docker commands:**
 
 ```bash
 # Check if Docker is installed
@@ -207,7 +240,7 @@ docker compose build
 ./docker_start.sh               # macOS/Linux only — use 'docker compose up -d' on Windows
 ```
 
-### How the Containers Are Wired
+**How the containers are wired:**
 
 All four services run as separate containers on a shared Docker network. Inter-service communication uses container hostnames (`phase1`, `phase2`, `phase3`, `phase4`) instead of `127.0.0.1`. Phase 2 and Phase 4 share a named Docker volume (`stats`) so attack results written by Phase 2 are immediately visible to the Phase 4 dashboard.
 
@@ -229,6 +262,108 @@ All four services run as separate containers on a shared Docker network. Inter-s
        └────── stats ──────┘
                (attack_stats.json)
 ```
+
+---
+
+### Option C — Manual (run each phase separately)
+
+Open a separate terminal for each phase.
+
+#### Phase 1 — Vulnerable AES-CBC Server
+
+```bash
+cd phase1
+python server.py
+```
+
+**URL:** http://127.0.0.1:5000
+
+The server runs AES-128-CBC with PKCS#7 padding and **intentionally leaks padding validity** through HTTP response codes:
+- `HTTP 200` — padding is valid
+- `HTTP 403` — padding is invalid ← this is the oracle signal
+
+The browser UI has three tabs: **Encryption** (step-by-step byte visualization), **Decryption + Oracle** (live oracle signal with padding analysis), and **How It Works** (PKCS#7 reference).
+
+---
+
+#### Phase 2 — Padding Oracle Attack
+
+> Phase 1 must be running before starting Phase 2.
+
+**Terminal attack:**
+
+```bash
+cd phase2
+python attack.py                        # interactive prompt
+python attack.py "Hello World"          # attack a specific message
+python attack.py "My secret message"    # any length works
+```
+
+**Browser visualization:**
+
+```bash
+cd phase2
+python attack_visualizer.py
+```
+
+**URL:** http://127.0.0.1:5002
+
+The browser UI has two top-level sections:
+
+**⚔ Attack AES-CBC Server** — three tabs:
+- **Live Attack:** type any plaintext, watch byte recovery in real time via SSE streaming
+- **How It Works:** step-by-step explanation of the attack algorithm and XOR math
+- **Attacker Tool:** manually probe the oracle, craft IV bytes, brute-force a single byte
+
+**🛡 Attack AES-GCM Server** — three tabs (requires Phase 3 running):
+- **Oracle Probe:** encrypt a message via GCM, run 256 tampered requests, observe all-403 silence
+- **Results:** response breakdown + CBC vs GCM comparison
+- **Why It Fails:** explanation of why authenticated encryption prevents the oracle
+
+**Offline Matplotlib dashboard** (requires `phase4/attack_stats.json` from a prior attack run):
+
+```bash
+cd phase2
+python dashboard.py
+```
+
+---
+
+#### Phase 3 — Secure AES-GCM Server
+
+```bash
+cd phase3
+python server.py
+```
+
+**URL:** http://127.0.0.1:5001
+
+The server runs AES-256-GCM with a 96-bit random nonce and 128-bit authentication tag. The auth tag is verified **before** decryption begins. Any tampered ciphertext returns the same generic `HTTP 403` — no padding oracle is possible.
+
+The browser UI has three tabs:
+- **Encryption:** 5-step live pipeline (read plaintext → generate nonce → AES-CTR encrypt → compute GHASH tag → package output)
+- **Decryption:** 5-step live pipeline showing tag verification before decrypt; the **Tamper Then Decrypt** button demonstrates auth tag catching modification at Step 3
+- **How It Works:** GCM internals, CBC vs GCM comparison table, CVE history
+
+---
+
+#### Phase 4 — Analytics Dashboard
+
+> Requires Phase 1, Phase 2 (with at least one completed attack), and Phase 3 running.
+
+```bash
+cd phase4
+python server.py
+```
+
+**URL:** http://127.0.0.1:5004
+
+The dashboard has five tabs:
+- **Overview:** live server status for all phases, key stats at a glance
+- **Attack Stats:** queries-per-byte bar chart, query distribution breakdown, efficiency analysis
+- **CBC vs GCM:** side-by-side comparison table + live GCM oracle probe
+- **Timeline:** project phase timeline + animated attack replay
+- **Report:** full project report preview + **PDF export**
 
 ---
 
@@ -297,181 +432,6 @@ sudo docker-compose ps
 
 All four containers should show `Up` and `(healthy)` status.
 
-### Service URLs (AWS)
-
-| Service | URL |
-|---|---|
-| Phase 1 — Vulnerable CBC Server | http://18.188.251.77:5000 |
-| Phase 2 — Attack Visualizer | http://18.188.251.77:5002 |
-| Phase 3 — Secure GCM Server | http://18.188.251.77:5001 |
-| Phase 4 — Analytics Dashboard | http://18.188.251.77:5004 |
-
----
-
-## Running Each Phase (Manual / Local)
-
-> If you prefer Docker, see the [Docker](#docker-recommended) section above — it handles everything automatically.
-
-### Quick Start — Launch All Servers at Once
-
-The easiest way to run the project is with the provided launch script, which starts all four servers and opens them in your browser simultaneously:
-
-```bash
-# macOS / Linux — make executable first (one-time setup)
-chmod +x start_all.sh
-./start_all.sh
-
-# Windows (Git Bash or WSL)
-bash start_all.sh
-```
-
-This will:
-1. Start Phase 1 (port 5000), Phase 3 (port 5001), Phase 2 (port 5002), and Phase 4 (port 5004)
-2. Wait for all servers to initialize
-3. Open all four UIs in your default browser
-
-Press `Ctrl+C` in the terminal to stop all servers at once.
-
-> **Compatibility:** Works on macOS, Linux, and Windows (via Git Bash or WSL). The script auto-detects the OS for opening the browser and auto-detects the venv location (`venv/bin/python` on macOS/Linux, `venv/Scripts/python.exe` on Windows).
-
----
-
-All four phases can also run manually. Open a separate terminal for each.
-
-### Phase 1 — Vulnerable AES-CBC Server
-
-```bash
-cd phase1
-python server.py
-```
-
-**URL:** http://127.0.0.1:5000
-
-The server runs AES-128-CBC with PKCS#7 padding and **intentionally leaks padding validity** through HTTP response codes:
-- `HTTP 200` — padding is valid
-- `HTTP 403` — padding is invalid ← this is the oracle signal
-
-The browser UI has three tabs: **Encryption** (step-by-step byte visualization), **Decryption + Oracle** (live oracle signal with padding analysis), and **How It Works** (PKCS#7 reference).
-
----
-
-### Phase 2 — Padding Oracle Attack
-
-> Phase 1 must be running before starting Phase 2.
-
-**Option A — Terminal attack:**
-
-```bash
-cd phase2
-python attack.py                        # interactive prompt
-python attack.py "Hello World"          # attack a specific message
-python attack.py "My secret message"    # any length works
-```
-
-**Option B — Browser visualization:**
-
-```bash
-cd phase2
-python attack_visualizer.py
-```
-
-**URL:** http://127.0.0.1:5002
-
-The browser UI has two top-level sections:
-
-**⚔ Attack AES-CBC Server** — three tabs:
-- **Live Attack:** type any plaintext, watch byte recovery in real time via SSE streaming
-- **How It Works:** step-by-step explanation of the attack algorithm and XOR math
-- **Attacker Tool:** manually probe the oracle, craft IV bytes, brute-force a single byte
-
-**🛡 Attack AES-GCM Server** — three tabs (requires Phase 3 running):
-- **Oracle Probe:** encrypt a message via GCM, run 256 tampered requests, observe all-403 silence
-- **Results:** response breakdown + CBC vs GCM comparison
-- **Why It Fails:** explanation of why authenticated encryption prevents the oracle
-
-**Option C — Offline Matplotlib dashboard** (requires `phase4/attack_stats.json` from a prior attack run):
-
-```bash
-cd phase2
-python dashboard.py
-```
-
----
-
-### Phase 3 — Secure AES-GCM Server
-
-```bash
-cd phase3
-python server.py
-```
-
-**URL:** http://127.0.0.1:5001
-
-The server runs AES-256-GCM with a 96-bit random nonce and 128-bit authentication tag. The auth tag is verified **before** decryption begins. Any tampered ciphertext returns the same generic `HTTP 403` — no padding oracle is possible.
-
-The browser UI has three tabs:
-- **Encryption:** 5-step live pipeline (read plaintext → generate nonce → AES-CTR encrypt → compute GHASH tag → package output)
-- **Decryption:** 5-step live pipeline showing tag verification before decrypt; the **Tamper Then Decrypt** button demonstrates auth tag catching modification at Step 3
-- **How It Works:** GCM internals, CBC vs GCM comparison table, CVE history
-
----
-
-### Phase 4 — Analytics Dashboard
-
-> Requires Phase 1, Phase 2 (with at least one completed attack), and Phase 3 running.
-
-```bash
-cd phase4
-python server.py
-```
-
-**URL:** http://127.0.0.1:5004
-
-The dashboard has five tabs:
-- **Overview:** live server status for all phases, key stats at a glance
-- **Attack Stats:** queries-per-byte bar chart, query distribution breakdown, efficiency analysis
-- **CBC vs GCM:** side-by-side comparison table + live GCM oracle probe
-- **Timeline:** project phase timeline + animated attack replay
-- **Report:** full project report preview + **PDF export**
-
----
-
-### Presentation Generator
-
-Generates a 14-slide professional PowerPoint presentation (widescreen 16:9, dark theme):
-
-```bash
-python generate_presentation.py
-# Output: padding_oracle_presentation.pptx
-```
-
-```bash
-pip install python-pptx   # if not already installed
-```
-
----
-
-## Dependencies
-
-```
-flask
-python-dotenv
-pycryptodome
-cryptography
-requests
-rich
-matplotlib
-numpy
-reportlab
-python-pptx
-```
-
-Install all at once:
-
-```bash
-pip install -r requirements.txt
-```
-
 ---
 
 ## Key Concepts
@@ -534,6 +494,23 @@ plaintext[j]    = intermediate[j] ⊕ prev_ciphertext_block[j]
 | Return the same error for all failures | Differentiate padding vs auth errors |
 | Use constant-time tag comparison | Use early-exit equality checks |
 | Use a fresh random nonce every encryption | Reuse a nonce with the same key |
+
+---
+
+## Dependencies
+
+```
+flask
+python-dotenv
+pycryptodome
+cryptography
+requests
+rich
+matplotlib
+numpy
+reportlab
+python-pptx
+```
 
 ---
 
