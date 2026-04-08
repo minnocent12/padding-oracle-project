@@ -23,6 +23,8 @@ This project is a full-stack cryptographic vulnerability study demonstrating how
 
 [![Demo Video](https://img.youtube.com/vi/GJqMoVAaSAU/0.jpg)](https://youtu.be/GJqMoVAaSAU)
 
+▶ [Watch the demo on YouTube](https://youtu.be/GJqMoVAaSAU)
+
 ---
 
 ## Live Demo (AWS)
