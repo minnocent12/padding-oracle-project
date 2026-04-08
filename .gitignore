@@ -37,5 +37,8 @@ phase4/attack_stats.json
 # Presentation generator (local use only)
 generate_presentation3.py
 
+# Personal notes — not for repo
+MY_AWS_NOTES.md
+
 # Logs
 *.log
