@@ -19,6 +19,12 @@ This project is a full-stack cryptographic vulnerability study demonstrating how
 
 ---
 
+## Demo Video
+
+[![Demo Video](https://img.youtube.com/vi/GJqMoVAaSAU/0.jpg)](https://youtu.be/GJqMoVAaSAU)
+
+---
+
 ## Live Demo (AWS)
 
 The project is deployed on AWS EC2 (t3.small, us-east-2). No setup required — open any link below directly in your browser:
