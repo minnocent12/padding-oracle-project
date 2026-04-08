@@ -164,6 +164,26 @@ docker compose build
 ### Common Commands
 
 ```bash
+# Check if Docker is installed
+docker --version
+
+# Check if Docker daemon is running
+docker info
+
+# Start Docker daemon
+open -a Docker                  # macOS only
+sudo systemctl start docker     # Linux only
+# Windows: launch Docker Desktop manually from the Start Menu
+
+# Check if Docker Compose plugin is available
+docker compose version
+
+# Check which containers are currently up
+docker compose ps
+
+# Check all containers (including stopped ones)
+docker ps -a
+
 # Start containers (background, no browser)
 docker compose up -d
 
@@ -184,7 +204,7 @@ docker compose down -v
 
 # Rebuild after code changes
 docker compose build
-./docker_start.sh
+./docker_start.sh               # macOS/Linux only — use 'docker compose up -d' on Windows
 ```
 
 ### How the Containers Are Wired
