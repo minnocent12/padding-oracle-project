@@ -33,10 +33,10 @@ The project is deployed on AWS EC2 (t3.small, us-east-2). No setup required — 
 
 | Service | Live URL |
 |---|---|
-| Phase 1 — Vulnerable CBC Server | http://18.188.251.77:5000 |
-| Phase 2 — Attack Visualizer | http://18.188.251.77:5002 |
-| Phase 3 — Secure GCM Server | http://18.188.251.77:5001 |
-| Phase 4 — Analytics Dashboard | http://18.188.251.77:5004 |
+| Phase 1 — Vulnerable CBC Server | http://18.221.87.226:5000 |
+| Phase 2 — Attack Visualizer | http://18.221.87.226:5002 |
+| Phase 3 — Secure GCM Server | http://18.221.87.226:5001 |
+| Phase 4 — Analytics Dashboard | http://18.221.87.226:5004 |
 
 ---
 
@@ -387,7 +387,7 @@ The project is deployed on AWS EC2 using Docker Compose. The setup mirrors the l
 | OS | Amazon Linux 2023 |
 | Region | us-east-2 (Ohio) |
 | Storage | 20 GiB gp3 |
-| Public IP | 18.188.251.77 |
+| Public IP | 18.221.87.226 |
 
 ### Security Group (Inbound Rules)
 
