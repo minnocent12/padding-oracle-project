@@ -27,19 +27,6 @@ This project is a full-stack cryptographic vulnerability study demonstrating how
 
 ---
 
-## Live Demo (AWS)
-
-The project is deployed on AWS EC2 (t3.small, us-east-2). No setup required — open any link below directly in your browser:
-
-| Service | Live URL |
-|---|---|
-| Phase 1 — Vulnerable CBC Server | http://18.221.87.226:5000 |
-| Phase 2 — Attack Visualizer | http://18.221.87.226:5002 |
-| Phase 3 — Secure GCM Server | http://18.221.87.226:5001 |
-| Phase 4 — Analytics Dashboard | http://18.221.87.226:5004 |
-
----
-
 ## Project Structure
 
 ```
